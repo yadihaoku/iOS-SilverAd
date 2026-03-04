@@ -30,7 +30,6 @@ let package = Package(
                 .product(name: "AppLovinSDK", package : "AppLovin-MAX-SDK-iOS"),
                 .product(name: "AppLovinMediationGoogleAdapter", package: "AppLovin-MAX-SDK-iOS"),
                 .product(name: "AppLovinMediationFacebookAdapter", package: "AppLovin-MAX-SDK-iOS"),
-                .product(name: "AppLovinMediationVungleAdapter", package: "AppLovin-MAX-SDK-iOS"),
                 .product(name: "AppLovinMediationMintegralAdapter", package: "AppLovin-MAX-SDK-iOS"),
                 .product(name: "AppLovinMediationInMobiAdapter", package: "AppLovin-MAX-SDK-iOS"),
             ],
