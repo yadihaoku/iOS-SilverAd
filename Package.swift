@@ -4,21 +4,21 @@
 import PackageDescription
 
 let package = Package(
-    name: "iOS-SilverAd",
+    name: "SilverAd",
     
     platforms: [
         .iOS(.v17),      // 最低 iOS 13（根据需求调整）
-        .macOS(.v11)    // 可选：支持 Mac
+//        .macOS(.v11)    // 可选：支持 Mac
     ],
     products: [
         .library(
-            name: "iOS-SilverAd",
+            name: "SilverAd",
             targets: ["ads"]
         ),
     ],
     dependencies: [
         .package(url: "https://github.com/chengxiaoyu00/AppLovin-MAX-SDK-iOS.git", branch: "master"),
-        .package(url: "https://github.com/googleads/swift-package-manager-google-mobile-ads.git", .upToNextMajor(from: "13.1.0")),
+//        .package(url: "https://github.com/googleads/swift-package-manager-google-mobile-ads.git", .upToNextMajor(from: "13.1.0")),
 
     ],
     targets: [
