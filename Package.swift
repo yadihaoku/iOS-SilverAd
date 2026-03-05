@@ -17,22 +17,7 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/yadihaoku/AppLovin-MAX-SDK-iOS.git", branch: "master"),
-//        .package(url: "https://github.com/chengxiaoyu00/AppLovin-MAX-SDK-iOS.git", branch: "master"),
-        .package(url: "https://github.com/googleads/googleads-mobile-ios-mediation-pangle.git", branch: "main"),
-        .package(url: "https://github.com/googleads/googleads-mobile-ios-mediation-meta.git", branch: "main"),
-        .package(url: "https://github.com/googleads/googleads-mobile-ios-mediation-liftoffmonetize.git", branch: "main"),
-        .package(url: "https://github.com/googleads/googleads-mobile-ios-mediation-mintegral.git", branch: "main")
-        
-        
-//        https:github.com/googleads/googleads-mobile-ios-mediation-pangle.git
-//        https://github.com/googleads/googleads-mobile-ios-mediation-applovin.git
-        
-//        https:github.com/googleads/googleads-mobile-ios-mediation-meta.git
-//        https://github.com/googleads/googleads-mobile-ios-mediation-mintegral.git
-        // google vangle
-//        https://github.com/googleads/googleads-mobile-ios-mediation-liftoffmonetize
-
+        .package(url: "https://github.com/chengxiaoyu00/AppLovin-MAX-SDK-iOS.git", branch: "master"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -47,15 +32,23 @@ let package = Package(
                 .product(name: "AppLovinMediationVungleAdapter", package: "AppLovin-MAX-SDK-iOS"),
                 .product(name: "AppLovinMediationPangleAdapter", package: "AppLovin-MAX-SDK-iOS"),
                 
-//                // Google Ads Adapter
                 .product(name: "GoogleAppLovinAdapter", package: "AppLovin-MAX-SDK-iOS"),
                 .product(name: "GoogleMintegralAdapterTarget", package: "AppLovin-MAX-SDK-iOS"),
+                .product(name: "AppLovinMediationPangleAdapter", package: "AppLovin-MAX-SDK-iOS"),
+                .product(name: "PangleAdapterTarget", package: "AppLovin-MAX-SDK-iOS"),
+                .product(name: "MetaAdapterTarget", package: "AppLovin-MAX-SDK-iOS"),
+                .product(name: "LiftoffMonetizeAdapterTarget", package: "AppLovin-MAX-SDK-iOS"),
                 
                 
-                .product(name: "PangleAdapterTarget", package: "googleads-mobile-ios-mediation-pangle"),
-                .product(name: "MetaAdapterTarget", package: "googleads-mobile-ios-mediation-meta"),
-                .product(name: "LiftoffMonetizeAdapterTarget", package: "googleads-mobile-ios-mediation-liftoffmonetize"),
-                .product(name: "MetaAdapterTarget", package: "googleads-mobile-ios-mediation-mintegral"),
+//                // Google Ads Adapter
+//                .product(name: "GoogleAppLovinAdapter", package: "AppLovin-MAX-SDK-iOS"),
+//                .product(name: "GoogleMintegralAdapterTarget", package: "AppLovin-MAX-SDK-iOS"),
+//                
+//                
+//                .product(name: "PangleAdapterTarget", package: "googleads-mobile-ios-mediation-pangle"),
+//                .product(name: "MetaAdapterTarget", package: "googleads-mobile-ios-mediation-meta"),
+//                .product(name: "LiftoffMonetizeAdapterTarget", package: "googleads-mobile-ios-mediation-liftoffmonetize"),
+//                .product(name: "MetaAdapterTarget", package: "googleads-mobile-ios-mediation-mintegral"),
             ],
             path: "Sources/ads",
             linkerSettings: [
