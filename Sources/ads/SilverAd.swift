@@ -73,7 +73,7 @@ public final class SilverAd {
     // MARK: - State
     private var isInitialized = false
     public var manualAllowAutoFill = true
-    
+    private var appIsInForeground = false
     // MARK: - Cache
     private let cacheManager = CacheManager()
     
@@ -96,15 +96,10 @@ public final class SilverAd {
         d.keyDecodingStrategy = .convertFromSnakeCase
         return d
     }()
-    func appIsForeground() ->Bool {
-        let state = UIApplication.shared.applicationState
-        
-        switch state {
-            // 通常也算作“前台”，但不能进行某些操作
-        case .active ,.inactive:
-            return true
-        default:
-            return false
+    private func updateAppState() {
+        Task{@MainActor in
+            let state = UIApplication.shared.applicationState
+            appIsInForeground = (state == .active || state == .inactive)
         }
     }
     // MARK: - Lifecycle（替代 ProcessLifecycleOwner）
@@ -122,15 +117,19 @@ public final class SilverAd {
             name: UIApplication.didEnterBackgroundNotification,
             object: nil
         )
+        
+        self.updateAppState()
     }
     
     @objc private func handleForeground() {
         debugPrint("handleForeground")
+        appIsInForeground = true
         scheduleStartupLoad()
     }
     
     @objc private func handleBackground() {
         debugPrint("handleBackground")
+        appIsInForeground = false
     }
     
     // MARK: - Init
@@ -397,7 +396,10 @@ public final class SilverAd {
         if isOverTodayAdLimit() { return false }
         if cacheManager.isCachedByAdUnit(adUnit) { return false }
         if requestInterceptor.onIntercept(adUnit: adUnit) { return false }
-        if !appIsForeground() { return false }
+        if !appIsInForeground {
+            debugPrint("appIsInForeground  false")
+            return false
+        }
         return true
     }
     
@@ -457,7 +459,7 @@ public final class SilverAd {
         //
         //   ┌─ Task(A) performFetch ─┐
         //   ├─ Task(B) performFetch ─┤──yield──▶ AsyncStream ──▶ 后台消费 Task
-        //   └─ Task(C) performFetch ─┘               │
+        //   └─ Task(C) performFetch ─┘                │
         //                                             │ 同时
         //                                        firstResultCont（CheckedContinuation）
         //                                             │ 第一个成功/全部失败 → resume 一次
