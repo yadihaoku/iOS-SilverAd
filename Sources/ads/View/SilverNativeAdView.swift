@@ -5,7 +5,7 @@ import SwiftUI
 import UIKit
 
 // [START add_view_model_to_view]
-public struct SilverNativeAdView: View {
+public struct SilverNativeAdView : View {
     
     var scene       : String
     var minHeight   : CGFloat = 300
@@ -24,7 +24,7 @@ public struct SilverNativeAdView: View {
         VStack(spacing: 0) {
             
             if let viewAd = nativeViewModel.nativeAd{
-                SilverAdBridgeView(viewAd: viewAd)
+                SilverAdBridgeView(viewAd: viewAd, options: ViewAdOptionsImpl(admobNib: "", maxNib:  ""))
                     .id(viewAd.uuid)
                     .frame(minHeight: minHeight)
             }else{

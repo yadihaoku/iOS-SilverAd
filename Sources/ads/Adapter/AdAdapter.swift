@@ -110,25 +110,25 @@ public struct NativeAdConfig {
         self.maxAdContainerNibName = maxNativeAdNibName
     }
 }
-
 public protocol ViewAdOptions: AnyObject {
-    var container : NativeAdConfig { get }
+    var container: NativeAdConfig { get }
 }
 
 
-private class ViewAdOptionsImpl : ViewAdOptions{
+
+public final class ViewAdOptionsImpl: ViewAdOptions {
+    public let container: NativeAdConfig
     
-    let container : NativeAdConfig
-    
-    init(container: NativeAdConfig) {
+    public init(container: NativeAdConfig) {
         self.container = container
     }
     
-}
-/// 提供默认实现
-public extension ViewAdOptions {
-    
-    func newInstance(_ admoNib:String, _ maxAdNib: String) -> ViewAdOptions{
-        return ViewAdOptionsImpl(container: NativeAdConfig(adMobContainerNibName: admoNib, maxNativeAdNibName: maxAdNib))
+    public convenience init(admobNib: String, maxNib: String) {
+        self.init(
+            container: NativeAdConfig(
+                adMobContainerNibName: admobNib,
+                maxNativeAdNibName: maxNib
+            )
+        )
     }
 }

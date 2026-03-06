@@ -30,14 +30,14 @@ struct MaxAdLargeViewContainer: UIViewRepresentable {
 }
 
 
-struct SilverAdBridgeView: UIViewRepresentable {
+public struct SilverAdBridgeView: UIViewRepresentable {
     
-    typealias UIViewType = UIView
+    public typealias UIViewType = UIView
     
     var viewAd: ViewAd
     var options: ViewAdOptions? = nil
     
-    func makeUIView(context: Context) -> UIView {
+    public func makeUIView(context: Context) -> UIView {
         debugPrint("SilverAdContainer  ->makeUIView \(viewAd.uuid)")
         return viewAd.asView(options: options)!
     }
@@ -47,7 +47,7 @@ struct SilverAdBridgeView: UIViewRepresentable {
         viewAd.destroy()
     }
     
-    func updateUIView(_ nativeAdView: UIView,context: Context) {
+    public func updateUIView(_ nativeAdView: UIView,context: Context) {
         debugPrint("SilverAdContainer  ->updateUIView \(viewAd.uuid)")
     }
 }
