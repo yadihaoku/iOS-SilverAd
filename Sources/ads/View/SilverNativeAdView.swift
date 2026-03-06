@@ -13,7 +13,7 @@ public struct SilverNativeAdView : View {
     var options     : ViewAdOptions? = nil
     
     // class ViewModel 用 @StateObject，struct 用 @State
-    @StateObject private var nativeViewModel = AdMobNativeAdViewModel()
+    @StateObject private var nativeViewModel = SilverNativeAdViewModel()
 
     public init(scene: String, minHeight: CGFloat = 300, callback: InteractionCallback? = nil, options: ViewAdOptions? = nil) {
         self.scene = scene
@@ -50,39 +50,58 @@ public struct SilverNativeAdView : View {
 }
  
 
-public class AdMobNativeAdViewModel: ObservableObject {
-    
+@MainActor
+public class SilverNativeAdViewModel: ObservableObject {
+
     @Published
     public var nativeAd: ViewAd?
-    
-    @ObservationIgnored
+
     public var callback: InteractionCallback?
+
+    // 用于防止重复请求：持有当前正在执行的 Task
+    private var fetchTask: Task<Void, Never>?
+
+    public init(nativeAd: ViewAd? = nil, callback: InteractionCallback? = nil) {
+        self.nativeAd = nativeAd
+        self.callback = callback
+    }
     
-    
-    deinit {
-        // 统一在这里销毁，生命周期和 ViewModel 绑定
+    public func destroy(){
         nativeAd?.destroy()
         nativeAd = nil
     }
-    
-    
-    func refreshAd(scene : String) {
-        
-        Task{
-            // 获取 ViewAd
-            guard let ad = await SilverAd.shared.fetchViewAd(scene: scene) else{
+
+    deinit {
+        fetchTask?.cancel()
+    }
+
+    public func refreshAd(scene: String) {
+        // 已有请求正在进行，忽略本次调用
+        guard fetchTask == nil else {
+            debugPrint("refreshAd: already fetching, skip")
+            return
+        }
+
+        fetchTask = Task { [weak self] in
+            defer {
+                // 无论成功失败，结束后清空 task 引用，允许下次调用
+                self?.fetchTask = nil
+            }
+
+            guard let ad = await SilverAd.shared.fetchViewAd(scene: scene) else {
                 debugPrint("fetchViewAd failure!")
                 return
             }
-            // 设置 callback
-            if let callback = self.callback{
+
+            // Task 被取消（deinit 触发）则不更新 UI
+            guard !Task.isCancelled else { return }
+
+            if let callback = self?.callback {
                 ad.setAdCallback(callback)
             }
-            
-            await MainActor.run {
-                self.nativeAd?.destroy()
-                self.nativeAd = ad
-            }
+
+            self?.nativeAd?.destroy()
+            self?.nativeAd = ad
         }
     }
 }
