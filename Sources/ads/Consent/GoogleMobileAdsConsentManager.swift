@@ -48,11 +48,11 @@ class GoogleMobileAdsConsentManager: NSObject {
         let parameters = RequestParameters()
         
         // For testing purposes, you can use UMPDebugGeography to simulate a location.
-        let debugSettings = DebugSettings()
+//        let debugSettings = DebugSettings()
         //TODO
         // 测试欧盟地区
-        debugSettings.geography = DebugGeography.EEA
-        parameters.debugSettings = debugSettings
+//        debugSettings.geography = DebugGeography.EEA
+//        parameters.debugSettings = debugSettings
         
         // Requesting an update to consent information should be called on every app launch.
         ConsentInformation.shared.requestConsentInfoUpdate(with: parameters) {

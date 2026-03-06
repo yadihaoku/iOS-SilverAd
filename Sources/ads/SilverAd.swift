@@ -53,7 +53,6 @@ public final class SilverAd {
     public static let shared = SilverAd()
     private init() { setupLifecycleObservers() }
     
-
     public static let STATE_ENABLED = 1
     
     private static let RETRY_LOAD_DELAY: TimeInterval = 30.0     // 秒
@@ -73,7 +72,6 @@ public final class SilverAd {
     
     // MARK: - State
     private var isInitialized = false
-    private var appInForeground = false
     public var manualAllowAutoFill = true
     
     // MARK: - Cache
@@ -98,7 +96,17 @@ public final class SilverAd {
         d.keyDecodingStrategy = .convertFromSnakeCase
         return d
     }()
-    
+    func appIsForeground() ->Bool {
+        let state = UIApplication.shared.applicationState
+        
+        switch state {
+            // 通常也算作“前台”，但不能进行某些操作
+        case .active ,.inactive:
+            return true
+        default:
+            return false
+        }
+    }
     // MARK: - Lifecycle（替代 ProcessLifecycleOwner）
     
     private func setupLifecycleObservers() {
@@ -117,16 +125,15 @@ public final class SilverAd {
     }
     
     @objc private func handleForeground() {
-        appInForeground = true
+        debugPrint("handleForeground")
         scheduleStartupLoad()
     }
     
     @objc private func handleBackground() {
-        appInForeground = false
+        debugPrint("handleBackground")
     }
     
     // MARK: - Init
-    
     public func initialize(params: SilverAdParams) {
         guard !isInitialized else {
             SilverAdLog.d("SilverAd: already initialized!")
@@ -143,13 +150,26 @@ public final class SilverAd {
             EventReporter.updateReporter(reporter)
         }
         
-        initAdSdk(params)
-        
-        // reporter 注入（简化，实际可封装到 EventReporter）
-        scheduleStartupLoad()
+        // 走 Google UMP 逻辑
+        if GDPRRegion.isCurrentRegionGDPR(){
+            Task{
+                await GoogleMobileAdsConsentManager.shared.gatherConsent { e in
+                    if GoogleMobileAdsConsentManager.shared.canRequestAds{
+                        self.initAdSdk(params)
+                        self.scheduleStartupLoad()
+                    }
+                }
+            }
+        } else {
+            initAdSdk(params)
+            scheduleStartupLoad()
+        }
     }
     
     private func initAdSdk(_ params : SilverAdParams){
+        
+        debugPrint("initAdSdk ->\(params)")
+        
         initMobileAds()
         initMax(params)
     }
@@ -165,6 +185,7 @@ public final class SilverAd {
         let initConfig = ALSdkInitializationConfiguration(sdkKey: key) { builder in
             
             builder.mediationProvider = ALMediationProviderMAX
+            
             
             if params.debug{
                 // Enable test mode by default for the current device.
@@ -349,7 +370,10 @@ public final class SilverAd {
     }
     
     private func preloadAd(adUnit: AdUnit) {
-        guard canPreloadAd(adUnit: adUnit) else { return }
+        guard canPreloadAd(adUnit: adUnit) else {
+            debugPrint("canPreloadAd: false ->\(adUnit.desc())")
+            return
+        }
         Task {
             await loadAndCacheAdByUnit(adUnit: adUnit)
         }
@@ -373,7 +397,7 @@ public final class SilverAd {
         if isOverTodayAdLimit() { return false }
         if cacheManager.isCachedByAdUnit(adUnit) { return false }
         if requestInterceptor.onIntercept(adUnit: adUnit) { return false }
-        if !appInForeground { return false }
+        if !appIsForeground() { return false }
         return true
     }
     
