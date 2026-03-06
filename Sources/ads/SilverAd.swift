@@ -41,6 +41,8 @@ public class SilverAdParams {
     var privacyPolicyURL: String?
     var termsOfServiceURL: String?
     var shouldShowTermsAndPrivacyPolicyAlertInGDPR = true
+    
+    public init(){}
 }
 
 // MARK: - SilverAd（主单例，对应 Kotlin object SilverAd）

@@ -93,7 +93,15 @@ public struct AdSceneGroup: Codable {
     public let state: Int
     public let waitDuration: TimeInterval
     public let adPools: [String]
-
+    
+    
+   public init(sceneName: [String], state: Int, waitDuration: TimeInterval, adPools: [String]) {
+       self.sceneName = sceneName
+       self.state = state
+       self.waitDuration = waitDuration
+       self.adPools = adPools
+   }
+ 
     /// 将 Group 展开为单个 AdScene
     public func asScene(_ name: String) -> AdScene {
         return AdScene(
