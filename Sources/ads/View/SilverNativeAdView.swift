@@ -15,10 +15,11 @@ public struct SilverNativeAdView : View {
     // class ViewModel 用 @StateObject，struct 用 @State
     @StateObject private var nativeViewModel = AdMobNativeAdViewModel()
 
-    public init(scene: String, minHeight: CGFloat = 300, callback: InteractionCallback? = nil) {
+    public init(scene: String, minHeight: CGFloat = 300, callback: InteractionCallback? = nil, options: ViewAdOptions? = nil) {
         self.scene = scene
         self.minHeight = minHeight
         self.callback = callback
+        self.options = options
     }
     
     public var body: some View {

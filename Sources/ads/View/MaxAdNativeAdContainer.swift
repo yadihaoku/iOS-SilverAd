@@ -37,6 +37,11 @@ public struct SilverAdBridgeView: UIViewRepresentable {
     var viewAd: ViewAd
     var options: ViewAdOptions? = nil
     
+    init(viewAd: ViewAd, options: ViewAdOptions? = nil) {
+        self.viewAd = viewAd
+        self.options = options
+    }
+    
     public func makeUIView(context: Context) -> UIView {
         debugPrint("SilverAdContainer  ->makeUIView \(viewAd.uuid)")
         return viewAd.asView(options: options)!
