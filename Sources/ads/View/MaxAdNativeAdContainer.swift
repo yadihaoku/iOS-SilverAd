@@ -37,7 +37,7 @@ public struct SilverAdBridgeView: UIViewRepresentable {
     var viewAd: ViewAd
     var options: ViewAdOptions? = nil
     
-    init(viewAd: ViewAd, options: ViewAdOptions? = nil) {
+    public init(viewAd: ViewAd, options: ViewAdOptions? = nil) {
         self.viewAd = viewAd
         self.options = options
     }
