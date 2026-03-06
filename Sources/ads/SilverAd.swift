@@ -33,14 +33,14 @@ public struct DefaultRequestInterceptor: AdLoadInterceptor {
 // MARK: - SilverAdParams
 
 public class SilverAdParams {
-    var debug: Bool = false
-    var reporter: AdReporter?
-    var loadInterceptor: AdLoadInterceptor?
-    var maxSdkKey: String?
+    public var debug: Bool = false
+    public var reporter: AdReporter?
+    public var loadInterceptor: AdLoadInterceptor?
+    public var maxSdkKey: String?
     
-    var privacyPolicyURL: String?
-    var termsOfServiceURL: String?
-    var shouldShowTermsAndPrivacyPolicyAlertInGDPR = true
+    public var privacyPolicyURL: String?
+    public var termsOfServiceURL: String?
+    public var shouldShowTermsAndPrivacyPolicyAlertInGDPR = true
     
     public init(){}
 }
