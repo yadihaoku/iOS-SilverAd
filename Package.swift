@@ -41,6 +41,9 @@ let package = Package(
                 
             ],
             path: "Sources/ads",
+            resources: [
+                .process("NativeAd"),
+            ],
             linkerSettings: [
                 .linkedFramework("AdSupport"),
                 .linkedFramework("AppTrackingTransparency"),

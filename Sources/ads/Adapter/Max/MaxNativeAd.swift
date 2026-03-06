@@ -65,16 +65,18 @@ public final class MaxNativeAd: MaxAds, ViewAd {
         
         // 从 xib 加载或 fallback code 布局
         let nibName = options?.container.maxAdContainerNibName ?? SilverAd.DEFAULT_MAX_NATIVE_AD_CONTAINER
-        let adView = createNativeAdView(nibName)
-        
-        // 绑定数据（对应 AdMob 的 populate(adView:with:)）
-        populate(adView: adView, with: loadedAd)
-        
-        
-        self.nativeAdView = adView
-        
-        SilverAdLog.w("MaxNativeAd.asView: bound nativeAdView (\(adUnit))")
-        return adView
+        if let adView = createNativeAdView(nibName){
+            
+            // 绑定数据（对应 AdMob 的 populate(adView:with:)）
+            populate(adView: adView, with: loadedAd)
+            
+            
+            self.nativeAdView = adView
+            
+            SilverAdLog.w("MaxNativeAd.asView: bound nativeAdView (\(adUnit))")
+            return adView
+        }
+        return nil
     }
     
     public func detach() {
@@ -106,10 +108,9 @@ public final class MaxNativeAd: MaxAds, ViewAd {
     public override func retrieveAd() -> Any? { nativeAd }
     
     
-    func createNativeAdView(_ nibName : String) -> MANativeAdView
+    func createNativeAdView(_ nibName : String) -> MANativeAdView?
     {
-        let nativeAdViewNib = UINib(nibName: nibName, bundle: Bundle.main)
-        let nativeAdView = nativeAdViewNib.instantiate(withOwner: nil, options: nil).first! as! MANativeAdView
+        guard let nativeAdView : MANativeAdView = UIView.loadFromNib(nibName: nibName) else{ return nil}
         
         let adViewBinder = MANativeAdViewBinder(builderBlock: { builder in
             builder.titleLabelTag = 1001

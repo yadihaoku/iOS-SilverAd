@@ -133,11 +133,8 @@ public final class AdMobNativeAd: AdMobAds, ViewAd {
     // MARK: - Private Helpers
 
     private func loadNativeAdView(nibName: String) -> NativeAdView? {
-        if let nib = Bundle.main.loadNibNamed(nibName, owner: nil, options: nil),
-           let view = nib.first as? NativeAdView {
-            return view
-        }
-        return  nil
+        let view : NativeAdView? = UIView.loadFromNib(nibName: nibName, owner: nil)
+        return view
     }
 
     private func populate(_ nativeAdView: NativeAdView, with nativeAd: NativeAd) {

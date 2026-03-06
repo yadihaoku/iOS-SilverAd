@@ -39,6 +39,32 @@ public protocol ViewAd: Ad {
     func retrieveAdLoader() -> NSObject?
 }
 
+extension UIView {
+
+    static func loadFromNib<T: UIView>(
+        nibName: String,
+        owner: Any? = nil
+    ) -> T? {
+
+
+
+        // Bundle.main 加载（闭源 SDK 场景，xib 被手动复制到主工程）
+        if Bundle.main.path(forResource: nibName, ofType: "nib") != nil {
+            return Bundle.main
+                .loadNibNamed(nibName, owner: owner, options: nil)?
+                .first as? T
+        }
+        
+        // 从 Bundle.module 加载（SPM 库自身资源）
+        if Bundle.module.path(forResource: nibName, ofType: "nib") != nil {
+            return Bundle.module
+                .loadNibNamed(nibName, owner: owner, options: nil)?
+                .first as? T
+        }
+        return nil
+    }
+}
+
 // MARK: - FullScreenAd Protocol (全屏广告：插屏、激励、开屏)
 
 public protocol FullScreenAd: Ad {
