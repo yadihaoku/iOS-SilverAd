@@ -5,15 +5,22 @@ import SwiftUI
 import UIKit
 
 // [START add_view_model_to_view]
-struct SilverNativeAdView: View {
+public struct SilverNativeAdView: View {
     
     var scene       : String
     var minHeight   : CGFloat = 300
     var callback    : InteractionCallback? = nil
-    // 无 @State 时 ，外层UI 刷新时，广告会丢失？？
-    @State var nativeViewModel = AdMobNativeAdViewModel()
     
-    var body: some View {
+    // class ViewModel 用 @StateObject，struct 用 @State
+    @StateObject private var nativeViewModel = AdMobNativeAdViewModel()
+
+    public init(scene: String, minHeight: CGFloat = 300, callback: InteractionCallback? = nil) {
+        self.scene = scene
+        self.minHeight = minHeight
+        self.callback = callback
+    }
+    
+    public var body: some View {
         VStack(spacing: 0) {
             
             if let viewAd = nativeViewModel.nativeAd{
@@ -29,26 +36,32 @@ struct SilverNativeAdView: View {
         .onAppear {
             refreshAd()
         }
-        .onDisappear{
-            nativeViewModel.nativeAd?.destroy()
-        }
     }
 
   private func refreshAd() {
-      debugPrint("refresh ad")
+      guard nativeViewModel.nativeAd == nil else { return }
+      
       nativeViewModel.callback = callback
       nativeViewModel.refreshAd(scene: scene)
+       
   }
 }
  
 
-@Observable
-public class AdMobNativeAdViewModel {
+public class AdMobNativeAdViewModel: ObservableObject {
     
+    @Published
     var nativeAd: ViewAd?
+    
     @ObservationIgnored
     internal var callback: InteractionCallback?
     
+    
+    deinit {
+        // 统一在这里销毁，生命周期和 ViewModel 绑定
+        nativeAd?.destroy()
+        nativeAd = nil
+    }
     
     
     func refreshAd(scene : String) {

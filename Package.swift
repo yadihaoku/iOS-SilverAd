@@ -28,13 +28,13 @@ let package = Package(
                 .product(name: "AppLovinSDK", package : "AppLovin-MAX-SDK-iOS"),
                 .product(name: "AppLovinMediationGoogleAdapter", package: "AppLovin-MAX-SDK-iOS"),
                 .product(name: "AppLovinMediationFacebookAdapter", package: "AppLovin-MAX-SDK-iOS"),
-//                .product(name: "AppLovinMediationMintegralAdapter", package: "AppLovin-MAX-SDK-iOS"),
+                .product(name: "AppLovinMediationMintegralAdapter", package: "AppLovin-MAX-SDK-iOS"),
                 .product(name: "AppLovinMediationVungleAdapter", package: "AppLovin-MAX-SDK-iOS"),
                 .product(name: "AppLovinMediationPangleAdapter", package: "AppLovin-MAX-SDK-iOS"),
                 
                 // Google Ads Adapter
                 .product(name: "GoogleAppLovinAdapter", package: "AppLovin-MAX-SDK-iOS"),
-//                .product(name: "GoogleMintegralAdapterTarget", package: "AppLovin-MAX-SDK-iOS"),
+                .product(name: "GoogleMintegralAdapterTarget", package: "AppLovin-MAX-SDK-iOS"),
                 .product(name: "PangleAdapterTarget", package: "AppLovin-MAX-SDK-iOS"),
                 .product(name: "MetaAdapterTarget", package: "AppLovin-MAX-SDK-iOS"),
                 .product(name: "LiftoffMonetizeAdapterTarget", package: "AppLovin-MAX-SDK-iOS"),
@@ -59,6 +59,7 @@ let package = Package(
                 .linkedFramework("WebKit"),
                 .linkedLibrary("z"),
             ]
+            
         ),
 
     ]
