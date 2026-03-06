@@ -152,10 +152,28 @@ public final class SilverAd {
         // 走 Google UMP 逻辑
         if GDPRRegion.isCurrentRegionGDPR(){
             Task{
-                await GoogleMobileAdsConsentManager.shared.gatherConsent { e in
-                    if GoogleMobileAdsConsentManager.shared.canRequestAds{
+                await GoogleMobileAdsConsentManager.shared.gatherConsent { error in
+
+                    if GoogleMobileAdsConsentManager.shared.canRequestAds {
                         self.initAdSdk(params)
                         self.scheduleStartupLoad()
+                    } else {
+                        // 真正不能请求广告的情况：
+                        // 用户是首次启动 + 在 EEA + 还未做出任何同意选择
+                        // 此时必须等用户完成同意流程后才能展示广告（合规要求）
+                        SilverAdLog.w("canRequestAds = false")
+                        
+                        if let error {
+                            EventReporter.report(event: SilverAdEvent.initFailure) { extras in
+                                extras["reason"] = error.localizedDescription
+                            }
+                        } else {
+                            // 此时有异常
+                            // 是否还能初始化 广告sdk，正常展示广告？？
+                            EventReporter.report(event: SilverAdEvent.initFailure){extras in
+                                extras["reason"] = "canRequestAds"
+                            }
+                        }
                     }
                 }
             }
@@ -194,7 +212,6 @@ public final class SilverAd {
                     builder.testDeviceAdvertisingIdentifiers = [currentIDFV]
                 }
             }
-            // Perform any additional configuration/setting changes
         }
         
         // 2. 配置 SDK Settings（初始化前后均可设置）

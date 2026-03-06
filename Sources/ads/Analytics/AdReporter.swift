@@ -29,6 +29,7 @@ public enum SilverAdEvent {
     public static let adFetchResult   = "st_ad_fetch_result"
     public static let adShowCheck     = "st_ad_show_check_result"
     public static let adConfigUpdate  = "st_ad_config_update"
+    public static let initFailure     = "st_ad_init_failure"
 
     // 对应 Kotlin object Param
     public enum Param {
