@@ -10,6 +10,7 @@ public struct SilverNativeAdView : View {
     var scene       : String
     var minHeight   : CGFloat = 300
     var callback    : InteractionCallback? = nil
+    var options     : ViewAdOptions? = nil
     
     // class ViewModel 用 @StateObject，struct 用 @State
     @StateObject private var nativeViewModel = AdMobNativeAdViewModel()
@@ -24,7 +25,7 @@ public struct SilverNativeAdView : View {
         VStack(spacing: 0) {
             
             if let viewAd = nativeViewModel.nativeAd{
-                SilverAdBridgeView(viewAd: viewAd, options: ViewAdOptionsImpl(admobNib: "", maxNib:  ""))
+                SilverAdBridgeView(viewAd: viewAd, options: options)
                     .id(viewAd.uuid)
                     .frame(minHeight: minHeight)
             }else{
@@ -51,10 +52,10 @@ public struct SilverNativeAdView : View {
 public class AdMobNativeAdViewModel: ObservableObject {
     
     @Published
-    var nativeAd: ViewAd?
+    public var nativeAd: ViewAd?
     
     @ObservationIgnored
-    internal var callback: InteractionCallback?
+    public var callback: InteractionCallback?
     
     
     deinit {
