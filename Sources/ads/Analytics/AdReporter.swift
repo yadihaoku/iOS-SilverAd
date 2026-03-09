@@ -15,7 +15,7 @@ import GoogleMobileAds
 // MARK: - AdReporter Protocol
 
 public protocol AdReporter: AnyObject {
-    func reportEvent(event: String, eventData: EventData?, extras: [String: Any?]?)
+    func reportEvent(event: String, eventData: EventData?, extras: [String: Any]?)
 }
 
 // MARK: - SilverAdEvent（对应 Kotlin object SilverAdEvent）

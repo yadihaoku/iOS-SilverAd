@@ -70,7 +70,6 @@ open class BaseAd:NSObject, Ad {
 
     // MARK: Callback
     public lazy var delegate = CallbackDelegate(parent: self)
-    private var _callback: InteractionCallback?
 
     // MARK: Init
     public init(adUnit: AdUnit, providerName_: String) {
@@ -187,7 +186,7 @@ open class BaseAd:NSObject, Ad {
     public final class CallbackDelegate: InteractionCallback, OnRewardCallback {
 
             private weak var parent: BaseAd?
-            weak var callback: InteractionCallback?
+            var callback: InteractionCallback?
 
             init(parent: BaseAd) {
                 self.parent = parent

@@ -84,6 +84,38 @@ public protocol InteractionCallback: AnyObject {
     func onAdsPaid()
 }
 
+public class InteractionCallbackAdapter: InteractionCallback {
+    
+    public enum State {
+        case click
+        case closed
+        case showed
+        case impression
+        case paid
+    }
+    
+    public var onChange:((State)->Void)?
+    public init(onChange: ((State) -> Void)? = nil) {
+        self.onChange = onChange
+    }
+    public func onAdClicked() {
+        onChange?(.click)
+    }
+    public func onAdClosed() {
+        onChange?(.closed)
+    }
+    public func onAdShowed() {
+        onChange?(.showed)
+    }
+    public func onAdImpression() {
+        onChange?(.impression)
+    }
+    public func onAdsPaid() {
+        onChange?(.paid)
+    }
+    
+}
+
 public protocol OnRewardCallback: AnyObject {
     func onReward()
 }
@@ -130,5 +162,11 @@ public final class ViewAdOptionsImpl: ViewAdOptions {
                 maxNativeAdNibName: maxNib
             )
         )
+    }
+}
+
+public extension Ad{
+    func setAdCallback(state : @escaping ((InteractionCallbackAdapter.State) ->Void)){
+        self.setAdCallback(InteractionCallbackAdapter(onChange: state))
     }
 }
