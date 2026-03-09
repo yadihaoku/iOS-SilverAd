@@ -73,7 +73,13 @@ public final class SilverAd {
     // MARK: - State
     private var isInitialized = false
     public var manualAllowAutoFill = true
-    private var appIsInForeground = false
+    private var appIsInForeground = false {
+        didSet {
+            if !oldValue && self.appIsInForeground{
+                self.scheduleStartupLoad()
+            }
+        }
+    }
     // MARK: - Cache
     private let cacheManager = CacheManager()
     
@@ -124,7 +130,6 @@ public final class SilverAd {
     @objc private func handleForeground() {
         debugPrint("handleForeground")
         appIsInForeground = true
-        scheduleStartupLoad()
     }
     
     @objc private func handleBackground() {
@@ -171,7 +176,7 @@ public final class SilverAd {
                             // 此时有异常
                             // 是否还能初始化 广告sdk，正常展示广告？？
                             EventReporter.report(event: SilverAdEvent.initFailure){extras in
-                                extras["reason"] = "canRequestAds"
+                                extras["reason"] = "canRequestAds return false"
                             }
                         }
                     }
@@ -216,9 +221,8 @@ public final class SilverAd {
         
         // 2. 配置 SDK Settings（初始化前后均可设置）
         let settings = ALSdk.shared().settings
-        if params.debug{
-            settings.isVerboseLoggingEnabled = true
-        }
+        // 开启日志输出
+        settings.isVerboseLoggingEnabled = params.debug
         
         if let privacyPolicyURL = params.privacyPolicyURL,let termsOfServiceURL = params.termsOfServiceURL {
             settings.termsAndPrivacyPolicyFlowSettings.isEnabled = true
@@ -251,6 +255,10 @@ public final class SilverAd {
             let config = try decoder.decode(AdConfig.self, from: data)
             updateConfig(config)
         } catch {
+            EventReporter.report(event: SilverAdEvent.adConfigUpdate){extras in
+                extras[SilverAdEvent.Param.result] = false
+                extras[SilverAdEvent.Param.reason] = error.localizedDescription
+            }
             SilverAdLog.w("updateConfig decode error: \(error)")
         }
     }
@@ -262,6 +270,12 @@ public final class SilverAd {
             return
         }
         configInstance = adConfig
+        
+        EventReporter.report(event: SilverAdEvent.adConfigUpdate){extras in
+            extras[SilverAdEvent.Param.result] = true
+            extras[SilverAdEvent.Param.newVersion] = adConfig.version
+            extras[SilverAdEvent.Param.oldVersion] = curVersion
+        }
         
         // 取消所有 retry 任务
         stateLock.lock()
