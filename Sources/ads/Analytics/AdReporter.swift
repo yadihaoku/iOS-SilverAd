@@ -100,3 +100,44 @@ public struct EventData {
         self.extras = extras
     }
 }
+
+public extension EventData {
+
+    func toMap() -> [String: Any?] {
+        var map: [String: Any?] = [
+            "scene":                  scene,
+            "thirdPartyAdPlacementId": thirdPartyAdPlacementId,
+            "ad_currency":            currencyCode,
+            "usd_micro":              micros,
+            "precision_type":         revenuePrecision,
+            "media_source_name":      adSourceName?.lowercased(),
+            "consume_time":           consumeTime,
+        ]
+
+        // 合并 adUnit 字段（对应 Kotlin adUnit?.toMap()?.let { putAll(it) }）
+        if let unitMap = adUnit?.toMap() {
+            map.merge(unitMap) { _, new in new }
+        }
+
+        // 合并 extras（对应 Kotlin putAll(extras)）
+        map.merge(extras) { _, new in new }
+
+        return map
+    }
+}
+
+// MARK: - AdUnit.toMap()（对应 Kotlin fun AdUnit.toMap()）
+
+public extension AdUnit {
+
+    func toMap() -> [String: Any?] {
+        return [
+            "platform_ad_unit":       adId,
+            "unit_name":     name,
+            "ad_platform": platform,
+            "ad_type":     type.rawValue,
+            "ecpm":     ecpm,
+            "auto_fill": autoFill
+        ]
+    }
+}
