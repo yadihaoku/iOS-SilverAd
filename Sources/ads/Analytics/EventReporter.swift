@@ -32,7 +32,7 @@ public enum EventReporter {
     ) {
         var props = [String: Any]()
         propertiesBlock(&props)
-        reporterImpl.reportEvent(event: event, eventData: eventData, extras: props.mapValues { $0 as Any? })
+        reportInternal(event: event, eventData: eventData, extras: props.mapValues { $0 as Any? })
     }
 
     /// 只带 properties 闭包，无 EventData（对应 Kotlin report(event, propertiesBlock)）
@@ -42,7 +42,7 @@ public enum EventReporter {
     ) {
         var props = [String: Any]()
         propertiesBlock(&props)
-        reporterImpl.reportEvent(event: event, eventData: nil, extras: props.mapValues { $0 as Any? })
+        reportInternal(event: event, eventData: nil, extras: props.mapValues { $0 as Any? })
     }
 
     /// 带 EventData + extras 字典（对应 Kotlin report(event, eventData, extras)）
@@ -51,14 +51,20 @@ public enum EventReporter {
         eventData: EventData?,
         extras: [String: Any?]? = nil
     ) {
-        reporterImpl.reportEvent(event: event, eventData: eventData, extras: extras)
+        reportInternal(event: event, eventData: eventData, extras: extras)
     }
     /// 带 EventData + extras 字典（对应 Kotlin report(event, eventData, extras)）
     public static func report(
         event: String,
         eventData: EventData?,
     ) {
-        reporterImpl.reportEvent(event: event, eventData: eventData, extras: nil)
+        reportInternal(event: event, eventData: eventData, extras: nil)
+    }
+    
+    private static func reportInternal(event: String, eventData: EventData?, extras: [String: Any?]?){
+        Task{
+            reporterImpl.reportEvent(event: event, eventData: eventData, extras: extras)
+        }
     }
 }
 
