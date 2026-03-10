@@ -76,7 +76,7 @@ public struct EventData {
     public var micros: Int64 = -1
     /// 对应 Kotlin revenuePrecision: Int?（AdValue.PrecisionType 的原始值）
     public var revenuePrecision: Int?
-    public var extras: [String: Any?] = [:]
+    public var extras: [String: Any] = [:]
     public var adSourceName: String?
     public var consumeTime: Int64?
     /// 对应 Kotlin admobResponse: ResponseInfo?（GMA SDK v12）
@@ -89,7 +89,7 @@ public struct EventData {
         currencyCode: String = "USD",
         micros: Int64 = -1,
         revenuePrecision: Int? = nil,
-        extras: [String: Any?] = [:]
+        extras: [String: Any] = [:]
     ) {
         self.scene = scene
         self.adUnit = adUnit
@@ -103,15 +103,15 @@ public struct EventData {
 
 public extension EventData {
 
-    func toMap() -> [String: Any?] {
-        var map: [String: Any?] = [
-            "scene":                  scene,
-            "thirdPartyAdPlacementId": thirdPartyAdPlacementId,
+    func toMap() -> [String: Any] {
+        var map: [String: Any] = [
+            "scene":                  scene ?? "",
+            "thirdPartyAdPlacementId": thirdPartyAdPlacementId ?? "",
             "ad_currency":            currencyCode,
             "usd_micro":              micros,
-            "precision_type":         revenuePrecision,
-            "media_source_name":      adSourceName?.lowercased(),
-            "consume_time":           consumeTime,
+            "precision_type":         revenuePrecision ?? AdValuePrecision.unknown.rawValue,
+            "media_source_name":      adSourceName ?? "",
+            "consume_time":           consumeTime ?? -1,
         ]
 
         // 合并 adUnit 字段（对应 Kotlin adUnit?.toMap()?.let { putAll(it) }）
@@ -130,7 +130,7 @@ public extension EventData {
 
 public extension AdUnit {
 
-    func toMap() -> [String: Any?] {
+    func toMap() -> [String: Any] {
         return [
             "platform_ad_unit":       adId,
             "unit_name":     name,
