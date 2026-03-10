@@ -37,6 +37,7 @@ public class SilverAdParams {
     public var reporter: AdReporter?
     public var loadInterceptor: AdLoadInterceptor?
     public var maxSdkKey: String?
+    public var testIdentifiers: [String]?
     
     public var privacyPolicyURL: String?
     public var termsOfServiceURL: String?
@@ -157,8 +158,7 @@ public final class SilverAd {
         // 走 Google UMP 逻辑
         if GDPRRegion.isCurrentRegionGDPR(){
             Task{
-                await GoogleMobileAdsConsentManager.shared.gatherConsent { error in
-
+                await GoogleMobileAdsConsentManager.shared.gatherConsent(testIdentifiers: params.testIdentifiers ?? []) { error in
                     if GoogleMobileAdsConsentManager.shared.canRequestAds {
                         self.initAdSdk(params)
                         self.scheduleStartupLoad()
@@ -224,6 +224,8 @@ public final class SilverAd {
         // 开启日志输出
         settings.isVerboseLoggingEnabled = params.debug
         
+        // 隐私服务设置
+        // https://support.axon.ai/en/max/ios/overview/terms-and-privacy-policy-flow#enabling-max-terms-and-privacy-policy-flow
         if let privacyPolicyURL = params.privacyPolicyURL,let termsOfServiceURL = params.termsOfServiceURL {
             settings.termsAndPrivacyPolicyFlowSettings.isEnabled = true
             settings.termsAndPrivacyPolicyFlowSettings.privacyPolicyURL = URL(string: privacyPolicyURL)

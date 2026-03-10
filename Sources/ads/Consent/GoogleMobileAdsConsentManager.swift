@@ -24,14 +24,17 @@ import UserMessagingPlatform
 /// you can choose another consent management platform to capture consent.
 
 @MainActor
-class GoogleMobileAdsConsentManager: NSObject {
+public class GoogleMobileAdsConsentManager: NSObject {
     static let shared = GoogleMobileAdsConsentManager()
     
     var canRequestAds: Bool {
         return ConsentInformation.shared.canRequestAds
     }
     
-    var isPrivacyOptionsRequired: Bool {
+    // 此值 返回 true
+    // 需要显示一个选项
+    // 调用 presentPrivacyOptionsForm() 进行 弹窗展示
+    public var isPrivacyOptionsRequired: Bool {
         return ConsentInformation.shared.privacyOptionsRequirementStatus == .required
     }
     
@@ -42,17 +45,20 @@ class GoogleMobileAdsConsentManager: NSObject {
     /// Helper method to call the UMP SDK methods to request consent information and load/present a
     /// consent form if necessary.
     func gatherConsent(
+        testIdentifiers : [String],
         from viewController: UIViewController? = nil,
         consentGatheringComplete: @escaping @MainActor (Error?) -> Void
     ) {
         let parameters = RequestParameters()
         
-        // For testing purposes, you can use UMPDebugGeography to simulate a location.
-//        let debugSettings = DebugSettings()
-        //TODO
-        // 测试欧盟地区
-//        debugSettings.geography = DebugGeography.EEA
-//        parameters.debugSettings = debugSettings
+        if !testIdentifiers.isEmpty{
+            // For testing purposes, you can use UMPDebugGeography to simulate a location.
+            let debugSettings = DebugSettings()
+            debugSettings.testDeviceIdentifiers = testIdentifiers
+            // 测试欧盟地区
+            debugSettings.geography = DebugGeography.EEA
+            parameters.debugSettings = debugSettings
+        }
         
         // Requesting an update to consent information should be called on every app launch.
         ConsentInformation.shared.requestConsentInfoUpdate(with: parameters) {
@@ -77,7 +83,7 @@ class GoogleMobileAdsConsentManager: NSObject {
     }
     
     /// Helper method to call the UMP SDK method to present the privacy options form.
-    @MainActor func presentPrivacyOptionsForm(from viewController: UIViewController? = nil)
+    @MainActor public func presentPrivacyOptionsForm(from viewController: UIViewController? = nil)
     async throws
     {
         try await ConsentForm.presentPrivacyOptionsForm(from: viewController)

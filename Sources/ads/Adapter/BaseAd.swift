@@ -11,7 +11,7 @@ import Foundation
 import UIKit
 
 // MARK: - BaseAd
-open class BaseAd:NSObject, Ad {
+open class BaseAd : NSObject, Ad {
 
     // MARK: Ad Protocol Requirements
     open var format: AdFormat { fatalError("Subclass must override format") }
