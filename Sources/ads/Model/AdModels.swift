@@ -157,9 +157,11 @@ public struct AdConfig: Codable {
         let version = try container.decode(Int.self, forKey: .version)
         let clickLimit = try container.decode(Int.self, forKey: .clickLimit)
         let showLimit = try container.decode(Int.self, forKey: .showLimit)
-        let adLimits = try container.decode(AdLimitConfig.self, forKey: .adLimits)
         let adPools = try container.decode([AdPool].self, forKey: .adPools)
         let adScenes = try container.decode([AdSceneGroup].self, forKey: .adScenes)
+        
+        let adLimits = try container.decodeIfPresent(AdLimitConfig.self, forKey: .adLimits) ?? .default
+        
         self.init(version: version, clickLimit: clickLimit, showLimit: showLimit, adLimits: adLimits, adPools: adPools, adScenes: adScenes)
     }
 
