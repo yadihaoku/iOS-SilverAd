@@ -296,7 +296,16 @@ public final class SilverAd {
     }
     
     public func canShowAd(scene: String, reportMsg: Bool = false) -> (Bool, AdShowFailReason) {
-        return canShowAdInternal(scene: scene)
+        let checkResult = canShowAdInternal(scene: scene)
+        
+        if reportMsg && !checkResult.0{
+            EventReporter.report(event: SilverAdEvent.adShowCheck, eventData: EventData(scene: scene), extras : [
+                SilverAdEvent.Param.result : false,
+                SilverAdEvent.Param.reason : checkResult.1.rawValue,
+                SilverAdEvent.Param.newVersion : currentConfig.version
+            ])
+        }
+        return checkResult
     }
     
     private func canShowAdInternal(scene: String) -> (Bool, AdShowFailReason) {
@@ -400,6 +409,13 @@ public final class SilverAd {
         let check = canShowAdInternal(scene: scene)
         guard check.0, let adScene = currentConfig.findAdScene(scene) else {
             SilverAdLog.w("fetchAd: blocked. scene=\(scene) reason=\(check.1)")
+            
+            EventReporter.report(event: SilverAdEvent.adFetchResult, eventData: EventData(scene: scene), extras : [
+                SilverAdEvent.Param.result : false,
+                SilverAdEvent.Param.reason : check.1.rawValue,
+                SilverAdEvent.Param.newVersion : currentConfig.version
+            ])
+            
             return nil
         }
         
@@ -410,6 +426,14 @@ public final class SilverAd {
             // 触发自动填充预加载
             let autoRefillUnits = getEnabledAdUnits(scene: scene).filter { $0.autoRefill() }
             preloadAdByUnits(adUnits: autoRefillUnits)
+            
+            EventReporter.report(event: SilverAdEvent.adFetchResult, eventData: EventData(scene: scene), extras : [
+                SilverAdEvent.Param.result : true,
+                SilverAdEvent.Param.from : "cache",
+                SilverAdEvent.Param.newVersion : currentConfig.version
+            ])
+            
+            
             return cached
         }
         
@@ -419,15 +443,25 @@ public final class SilverAd {
         let result = await fastestAdByScene(adScene: adScene)
         
         var ad : Ad?
+        var reportParams : [String : Any] = [
+            SilverAdEvent.Param.from : "load",
+            SilverAdEvent.Param.newVersion : currentConfig.version
+        ]
         do{
             ad = try result.get()
             ad?.currentAdScene = adScene
         }catch{
             if let loadError = error as? AdLoadException{
                 debugPrint("fastestAd failure: \(String(describing: loadError.errorDescription))")
+                reportParams[SilverAdEvent.Param.reason] = loadError.errorDescription
+            }else{
+                reportParams[SilverAdEvent.Param.reason] = String(describing:  error)
             }
             debugPrint("fastestAd failure: \(error)")
         }
+        reportParams[SilverAdEvent.Param.result] = ad != nil
+        
+        EventReporter.report(event: SilverAdEvent.adFetchResult, eventData: EventData(scene: scene), extras :reportParams)
         
         return ad
     }
