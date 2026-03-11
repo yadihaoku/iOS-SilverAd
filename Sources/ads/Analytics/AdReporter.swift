@@ -34,6 +34,7 @@ public enum SilverAdEvent {
     // 对应 Kotlin object Param
     public enum Param {
         public static let result        = "result"
+        public static let scene         = "scene"
         public static let pageName      = "page_name"
         public static let reason        = "reason"
         public static let consumeTime   = "consume_time"

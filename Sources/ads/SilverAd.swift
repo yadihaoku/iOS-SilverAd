@@ -299,11 +299,12 @@ public final class SilverAd {
         let checkResult = canShowAdInternal(scene: scene)
         
         if reportMsg && !checkResult.0{
-            EventReporter.report(event: SilverAdEvent.adShowCheck, eventData: EventData(scene: scene), extras : [
-                SilverAdEvent.Param.result : false,
-                SilverAdEvent.Param.reason : checkResult.1.rawValue,
-                SilverAdEvent.Param.newVersion : currentConfig.version
-            ])
+            EventReporter.report(event: SilverAdEvent.adShowCheck){extras in
+                extras[SilverAdEvent.Param.result] = false
+                extras[SilverAdEvent.Param.scene] = scene
+                extras[SilverAdEvent.Param.reason] = checkResult.1.rawValue
+                extras[SilverAdEvent.Param.newVersion] = currentConfig.version
+            }
         }
         return checkResult
     }
@@ -329,7 +330,6 @@ public final class SilverAd {
         if adTypeLimit != .none{
             return (false, adTypeLimit)
         }
-        
         
         
         if requestInterceptor.onIntercept(scene: scene) {
@@ -410,7 +410,8 @@ public final class SilverAd {
         guard check.0, let adScene = currentConfig.findAdScene(scene) else {
             SilverAdLog.w("fetchAd: blocked. scene=\(scene) reason=\(check.1)")
             
-            EventReporter.report(event: SilverAdEvent.adFetchResult, eventData: EventData(scene: scene), extras : [
+            EventReporter.report(event: SilverAdEvent.adFetchResult, extras : [
+                SilverAdEvent.Param.scene : scene,
                 SilverAdEvent.Param.result : false,
                 SilverAdEvent.Param.reason : check.1.rawValue,
                 SilverAdEvent.Param.newVersion : currentConfig.version
@@ -427,12 +428,12 @@ public final class SilverAd {
             let autoRefillUnits = getEnabledAdUnits(scene: scene).filter { $0.autoRefill() }
             preloadAdByUnits(adUnits: autoRefillUnits)
             
-            EventReporter.report(event: SilverAdEvent.adFetchResult, eventData: EventData(scene: scene), extras : [
+            EventReporter.report(event: SilverAdEvent.adFetchResult, extras : [
+                SilverAdEvent.Param.scene : scene,
                 SilverAdEvent.Param.result : true,
                 SilverAdEvent.Param.from : "cache",
                 SilverAdEvent.Param.newVersion : currentConfig.version
             ])
-            
             
             return cached
         }
@@ -444,6 +445,7 @@ public final class SilverAd {
         
         var ad : Ad?
         var reportParams : [String : Any] = [
+            SilverAdEvent.Param.scene : scene,
             SilverAdEvent.Param.from : "load",
             SilverAdEvent.Param.newVersion : currentConfig.version
         ]
@@ -461,7 +463,7 @@ public final class SilverAd {
         }
         reportParams[SilverAdEvent.Param.result] = ad != nil
         
-        EventReporter.report(event: SilverAdEvent.adFetchResult, eventData: EventData(scene: scene), extras :reportParams)
+        EventReporter.report(event: SilverAdEvent.adFetchResult, extras :reportParams)
         
         return ad
     }

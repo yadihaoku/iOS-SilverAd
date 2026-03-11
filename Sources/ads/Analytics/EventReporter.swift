@@ -48,6 +48,13 @@ public enum EventReporter {
     /// 带 EventData + extras 字典（对应 Kotlin report(event, eventData, extras)）
     public static func report(
         event: String,
+        extras: [String: Any]? = nil
+    ) {
+        reportInternal(event: event, eventData: nil, extras: extras)
+    }
+    /// 带 EventData + extras 字典（对应 Kotlin report(event, eventData, extras)）
+    public static func report(
+        event: String,
         eventData: EventData?,
         extras: [String: Any]? = nil
     ) {
