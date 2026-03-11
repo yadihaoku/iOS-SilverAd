@@ -280,34 +280,35 @@ public struct AdFormatLimitConfig: Codable {
 
 public struct AdLimitConfig: Codable {
 
-    public let inter: AdFormatLimitConfig
-    public let native: AdFormatLimitConfig
-    public let reward: AdFormatLimitConfig
-    public let appopen: AdFormatLimitConfig
+    public let inter: AdFormatLimitConfig?
+    public let native: AdFormatLimitConfig?
+    public let reward: AdFormatLimitConfig?
+    public let appopen: AdFormatLimitConfig?
 
     public init(
-        inter:   AdFormatLimitConfig = .unlimited,
-        native:         AdFormatLimitConfig = .unlimited,
-        reward:         AdFormatLimitConfig = .unlimited,
-        appopen:        AdFormatLimitConfig = .unlimited,
+        inter   :   AdFormatLimitConfig? = nil,
+        native  :   AdFormatLimitConfig? = nil,
+        reward  :   AdFormatLimitConfig? = nil,
+        appopen :   AdFormatLimitConfig? = nil
     ) {
         self.inter      = inter
         self.native     = native
         self.appopen    = appopen
         self.reward     = reward
     }
+ 
 
     /// 根据广告格式取对应限制配置
     public func config(for format: AdFormat) -> AdFormatLimitConfig {
         switch format {
         case .ad_interstitial, .ad_reward_interstitial:
-            return inter
+            return inter ?? .unlimited
         case .ad_native:
-            return native
+            return native ?? .unlimited
         case .ad_reward:
-            return reward
+            return reward ?? .unlimited
         case .ad_splash:
-            return appopen
+            return appopen ?? .unlimited
         default:
             return .unlimited
         }
