@@ -50,6 +50,9 @@ public enum SilverAdEvent {
 
 public enum AdShowFailReason: String {
     case clickLimit         = "click_limit"
+    case showLimit          = "show_limit"
+    case singleAdClickLimit = "single_ad_click_limit"
+    
     case intervalShowLimit  = "interval_show_limit"
     case intervalDuration   = "interval_duration"
     case sceneNotMatch      = "scene_not_match"
@@ -57,7 +60,7 @@ public enum AdShowFailReason: String {
     case blockByInterceptor = "block_by_interceptor"
     case networkError       = "network_error"
     case other              = "other"
-    case empty              = ""
+    case none              = ""
 }
 
 // MARK: - EventData（对应 Kotlin data class EventData）

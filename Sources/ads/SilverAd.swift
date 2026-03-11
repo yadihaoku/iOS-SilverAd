@@ -307,31 +307,79 @@ public final class SilverAd {
         }
         
         let adUnits = getEnabledAdUnits(scene: scene)
-        guard !adUnits.isEmpty else {
+        guard !adUnits.isEmpty, let firstUnit = adUnits.first else {
             SilverAdLog.w("canShowAd: [\(scene)] -> false. no enabled adUnits.")
             return (false, .adUnitNotFound)
         }
-        
-        if isOverTodayAdLimit() {
-            return (false, .clickLimit)
+        let todayLimit = isOverTodayAdLimit()
+        if todayLimit != .none{
+            return (false, todayLimit)
         }
+        
+        let adTypeLimit = isOverTodayAdTypeLimit(for: firstUnit.type)
+        if adTypeLimit != .none{
+            return (false, adTypeLimit)
+        }
+        
+        
         
         if requestInterceptor.onIntercept(scene: scene) {
             return (false, .blockByInterceptor)
         }
         
         
-        return  (true, .empty)
+        return  (true, .none)
     }
     
-    public func isOverTodayAdLimit() -> Bool {
+    public func isOverTodayAdLimit() -> AdShowFailReason {
         let count = limitManager.getAdClickCount()
         let limit = currentConfig.clickLimit
         if count >= limit && limit > 0 {
             SilverAdLog.d("canShowAd-> false. over click limit. (\(count) >= \(limit))")
-            return true
+            return .clickLimit
         }
-        return false
+        return .none
+    }
+    
+    public func isOverTodayAdTypeLimit(for type : AdFormat) -> AdShowFailReason {
+        
+        let limits = currentConfig.adLimits.config(for: type)
+        
+        let adTypeStat = limitManager.getAdTypeStat(type: type)
+        
+        let showCountForType = adTypeStat.showCount
+        if limits.daily24hShowLimit > 0 && showCountForType >= limits.daily24hShowLimit {
+            SilverAdLog.d("canShowAd-> false. over daily24hShowLimit limit. (\(showCountForType) >= \(limits.daily24hShowLimit))")
+            return .showLimit
+        }
+        
+        let clickCountForType = adTypeStat.clickCount
+        if limits.daily24hClickLimit > 0 && clickCountForType >= limits.daily24hClickLimit {
+            SilverAdLog.d("canShowAd-> false. over daily24hClickLimit limit. (\(clickCountForType) >= \(limits.daily24hClickLimit))")
+            return .clickLimit
+        }
+        
+        let singleAdStat = limitManager.getSingleAdStat()
+        
+        let overLimtType = AdFormat.allCases.first { t in
+            
+            let adTypeLimit = currentConfig.adLimits.config(for: t)
+            
+            let clickCountForSingleAd = singleAdStat[t] ?? 0
+            
+            if adTypeLimit.singleAdClickLimit > 0 && clickCountForSingleAd >= adTypeLimit.singleAdClickLimit {
+                SilverAdLog.d("canShowAd-> false. over singleAdClickLimit limit. (\(clickCountForSingleAd) >= \(adTypeLimit.singleAdClickLimit))")
+                return true
+            }
+            return false
+        }
+        
+        if overLimtType != nil{
+            return .singleAdClickLimit
+        }
+        
+        
+        return .none
     }
     
     public func incrementAdIntervalLimit(scene: String) {
@@ -426,7 +474,9 @@ public final class SilverAd {
     }
     
     private func canPreloadAd(adUnit: AdUnit) -> Bool {
-        if isOverTodayAdLimit() { return false }
+        if isOverTodayAdLimit() != .none  { return false }
+        if isOverTodayAdTypeLimit(for: adUnit.type) != .none  { return false }
+        
         if cacheManager.isCachedByAdUnit(adUnit) { return false }
         if requestInterceptor.onIntercept(adUnit: adUnit) { return false }
         if !appIsInForeground {
@@ -702,50 +752,57 @@ private extension Array where Element: Hashable {
 //
 // actor 保证并发安全：多个加载 Task 同时完成时，只有第一个 resume continuation
 // 后续的 trySetFirst 返回 false，调用方直接走入缓存逻辑
-
 private actor FirstResultRacer {
 
     private var continuation: CheckedContinuation<Result<any Ad, Error>, Never>?
-    private var resolved = false
+    private var resolvedResult: Result<any Ad, Error>? = nil  // 存结果，替代 Bool 标志
 
-    /// 等待第一个结果（调用方 await 此方法）
+    // MARK: - wait
+
     func wait() async -> Result<any Ad, Error> {
-        await withCheckedContinuation { cont in
-            if resolved {
-                // 已经有结果了（极罕见的时序：wait 比 trySetFirst 晚调用）
-                // 此分支理论上不会发生，因为 wait 在 Task 启动之前就 await 了
-                cont.resume(returning: .failure(
-                    AdLoadException(code: "-1", msg: "racer already resolved")
-                ))
+        // 已有结果（trySetFirst 比 wait 先执行），直接返回，不挂起
+        if let result = resolvedResult {
+            return result
+        }
+
+        return await withCheckedContinuation { cont in
+            // double-check：进入 continuation 前再检查一次（actor 重入保护）
+            if let result = resolvedResult {
+                cont.resume(returning: result)
             } else {
                 continuation = cont
             }
         }
     }
 
-    /// 尝试设置第一个成功结果
-    /// - Returns: true 表示是第一个（调用方应通知上层），false 表示已有结果（入缓存）
+    // MARK: - trySetFirst
+
+    @discardableResult
     func trySetFirst(_ ad: any Ad) -> Bool {
-        guard !resolved else { return false }
-        resolved = true
-        continuation?.resume(returning: .success(ad))
-        continuation = nil
+        guard resolvedResult == nil else { return false }
+        resolve(with: .success(ad))
         return true
     }
 
-    /// 全部失败时调用，只在尚未有成功结果时 resume
+    // MARK: - failIfNeeded
+
     func failIfNeeded(_ error: Error) {
-        guard !resolved else { return }
-        resolved = true
-        continuation?.resume(returning: .failure(error))
-        continuation = nil
+        guard resolvedResult == nil else { return }
+        resolve(with: .failure(error))
     }
 
-    /// 超时时调用，若还没有结果则强制 resume 超时失败
+    // MARK: - timeoutIfNeeded
+
     func timeoutIfNeeded(_ error: Error) {
-        guard !resolved else { return }
-        resolved = true
-        continuation?.resume(returning: .failure(error))
+        guard resolvedResult == nil else { return }
+        resolve(with: .failure(error))
+    }
+
+    // MARK: - 统一 resolve 入口
+
+    private func resolve(with result: Result<any Ad, Error>) {
+        resolvedResult = result          // 先存结果
+        continuation?.resume(returning: result)
         continuation = nil
     }
 }

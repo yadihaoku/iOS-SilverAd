@@ -10,7 +10,7 @@ import Foundation
 
 protocol Limiter: AnyObject {
     /// 记录广告展示（对应 Kotlin markAdShow）
-    func markAdShow(scene: AdScene)
+    func markAdShow(ad: Ad, scene: AdScene)
     /// 记录广告点击（对应 Kotlin markAdClick，同一广告只记一次）
     func markAdClick(ad: Ad, scene: AdScene)
 }

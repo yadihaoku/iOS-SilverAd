@@ -14,6 +14,12 @@ import Foundation
 
 // MARK: - AdLimitManager
 
+struct AdStat {
+    let clickCount          : Int
+    let showCount           : Int
+    let singleAdClickCount  : Int
+}
+
 internal final class AdLimitManager {
 
     public static let shared = AdLimitManager()
@@ -24,7 +30,7 @@ internal final class AdLimitManager {
     private let keyTodayShow  = "ad_t_s"
 
     // 对应 Kotlin private val adClickedId = hashSetOf<String>()（防重复点击）
-    private var adClickedIds = Set<String>()
+    private var adClickCounts = [String : Int]()
     private let clickIdLock  = NSLock()
 
     // MARK: - Recorder（对应 Kotlin @Volatile recorderInstance + recorder()）
@@ -34,12 +40,12 @@ internal final class AdLimitManager {
     private let recorderLock = NSLock()
 
     private func recorder() -> LimitRecorder {
-        recorderLock.lock()
-        defer { recorderLock.unlock() }
-        if let r = _recorder { return r }
-        let r = LimitRecorder()
-        _recorder = r
-        return r
+        recorderLock.withLock {
+            if let r = _recorder { return r }
+            let r = LimitRecorder()
+            _recorder = r
+            return r
+        }
     }
 
     // MARK: - 公开查询 API（对应 Kotlin getAdClickCount / getAdIntervalLimitCount 等）
@@ -63,35 +69,99 @@ internal final class AdLimitManager {
     func getAdLastShowTime(scene: String) -> Int64 {
         recorder().peekTime(key: buildAdTimeKey(scene))
     }
-
+    
+    func getAdTypeShowCount(type : AdFormat) -> Int {
+        recorder().peekAmount(key: buildAdTypeShowKey(type))
+    }
+    func getAdTypeClickCount(type : AdFormat) -> Int {
+        recorder().peekAmount(key: buildAdTypeClickKey(type))
+    }
+    func getSingleAdClickCount(type : AdFormat) -> Int {
+        recorder().peekAmount(key: buildAdTypeSingleAdClickKey(type))
+    }
+    
+    func getAdTypeStat(type : AdFormat) -> AdStat{
+        
+        let showKey = buildAdTypeShowKey(type)
+        let clickKey = buildAdTypeClickKey(type)
+        let singAdKey = buildAdTypeSingleAdClickKey(type)
+        let data = recorder().peekAmounts(keys: [showKey, clickKey, singAdKey])
+        
+        return AdStat(clickCount: data[clickKey] ?? 0, showCount: data[showKey] ?? 0, singleAdClickCount: data[singAdKey] ?? 0)
+    }
+    
+    func getSingleAdStat() ->[AdFormat : Int]{
+        // 遍历所有 case
+        var allKeys = AdFormat.allCases.map { buildAdTypeSingleAdClickKey($0)        }
+        var data = recorder().peekAmounts(keys: allKeys)
+        
+        return Dictionary(uniqueKeysWithValues: AdFormat.allCases.map { ($0, data[buildAdTypeSingleAdClickKey($0)] ?? 0) })
+    }
+    
     // MARK: - Key 构造（对应 Kotlin private fun buildXxxKey）
 
     private func buildAdTimeKey(_ scene: String)          -> String { "lastest_show_\(scene)" }
     private func buildAdIntervalLimitKey(_ scene: String) -> String { "interval_limit_\(scene)" }
     private func buildAdClickKey(_ scene: String)         -> String { "ad_click_\(scene)" }
+    private func buildAdTypeClickKey(_ type: AdFormat)    -> String { "ad_click_with_\(type.rawValue)"}
+    private func buildAdTypeShowKey(_ type: AdFormat)     -> String { "ad_show_with_\(type.rawValue)"}
+    // 单个广告实例 当日点击的最大次数
+    private func buildAdTypeSingleAdClickKey(_ type: AdFormat)     -> String { "ad_click_with_single_\(type.rawValue)"}
 
     // MARK: - 展示 & 点击记录（对应 Kotlin markAdShowInternal / markAdClickInternal）
 
-    private func markAdShowInternal(scene: AdScene) {
-        let rec = recorder()
+    private func markAdShowInternal(ad: Ad, scene: AdScene) {
         // 对应 Kotlin scope.launch { ... }：后台 Task 执行，不阻塞调用方
         Task.detached(priority: .utility) { [weak self] in
             guard let self else { return }
-            SilverAdLog.d("markAdShow: \(scene.sceneName)")
-            rec.incrementSpecialAmount(key: self.keyTodayShow)
+            
+            let adTypeShowKey = buildAdTypeShowKey(ad.format)
+
+            let rec = recorder()
+            
+            // 当日展示次数
+            let tsc = rec.incrementSpecialAmount(key: self.keyTodayShow)
+            // 当日该类型展示次数
+            let ttsc = rec.incrementSpecialAmount(key: adTypeShowKey)
+            // 该场景最后一次展示时间
             rec.updateLatestAdShowTime(key: self.buildAdTimeKey(scene.sceneName))
+            // 当日该场景展示次数
             rec.setSpecialAmount(key: self.buildAdIntervalLimitKey(scene.sceneName), amount: 0)
+            
+            SilverAdLog.d("markAdShow: \(scene.sceneName) tsc=\(tsc) ttsc=\(ttsc)")
         }
     }
 
-    private func markAdClickInternal(scene: AdScene) {
-        let rec = recorder()
+    private func markAdClickInternal(ad: Ad, scene: AdScene) {
         Task.detached(priority: .utility) { [weak self] in
             guard let self else { return }
             
+            let adTypeClickKey = buildAdTypeClickKey(ad.format)
+            let rec = recorder()
+            
+            // 当日 该场景 广告点击次数
             let clickCount = rec.incrementSpecialAmount(key: self.buildAdClickKey(scene.sceneName))
             SilverAdLog.d("markAdClick: \(scene.sceneName)  click amount:\(clickCount)")
+            // 累加总的广告点击次数
             rec.incrementSpecialAmount(key: self.keyTodayClick)
+            // 累加当时该类型广告的点击次数
+            rec.incrementSpecialAmount(key: adTypeClickKey)
+        }
+    }
+    
+    // MARK: - 单个广告点击计数核心逻辑
+
+    /// 记录点击，返回当前该广告累计点击次数
+    /// - Returns: 本次点击后的累计次数
+    @discardableResult
+    private func incrementClickCount(for ad: Ad) -> Int {
+        clickIdLock.withLock {
+            let newCount = (adClickCounts[ad.uuid] ?? 0) + 1
+            adClickCounts[ad.uuid] = newCount
+            
+            recorder().updateAmountByMaxValue(key: buildAdTypeSingleAdClickKey(ad.format), amount: newCount)
+            
+            return newCount
         }
     }
 
@@ -117,21 +187,21 @@ internal final class AdLimitManager {
             self.manager = manager
         }
 
-        func markAdShow(scene: AdScene) {
-            manager?.markAdShowInternal(scene: scene)
+        func markAdShow(ad: Ad, scene: AdScene) {
+            manager?.markAdShowInternal(ad: ad, scene: scene)
         }
 
         func markAdClick(ad: Ad, scene: AdScene) {
             guard let manager else { return }
 
-            // 对应 Kotlin if (adClickedId.contains(ad.uuid)) { return }
-            manager.clickIdLock.lock()
-            let alreadyClicked = manager.adClickedIds.contains(ad.uuid)
-            if !alreadyClicked { manager.adClickedIds.insert(ad.uuid) }
-            manager.clickIdLock.unlock()
+            // 1. 递增点击次数（无论第几次都记录）
+            let clickCount = manager.incrementClickCount(for: ad)
+            SilverAdLog.d("markAdClick: uuid=\(ad.uuid) count=\(clickCount)")
 
-            guard !alreadyClicked else { return }
-            manager.markAdClickInternal(scene: scene)
+            // 2. 第一次点击才计入 24h 统计（防止同一广告刷点击数据）
+            if clickCount == 1 {
+                manager.markAdClickInternal(ad: ad, scene: scene)
+            }
         }
     }
 }

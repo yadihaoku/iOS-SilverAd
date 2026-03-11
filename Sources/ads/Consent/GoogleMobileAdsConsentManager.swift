@@ -25,9 +25,9 @@ import UserMessagingPlatform
 
 @MainActor
 public class GoogleMobileAdsConsentManager: NSObject {
-    static let shared = GoogleMobileAdsConsentManager()
+    public static let shared = GoogleMobileAdsConsentManager()
     
-    var canRequestAds: Bool {
+    public var canRequestAds: Bool {
         return ConsentInformation.shared.canRequestAds
     }
     
@@ -38,13 +38,13 @@ public class GoogleMobileAdsConsentManager: NSObject {
         return ConsentInformation.shared.privacyOptionsRequirementStatus == .required
     }
     
-    func reset(){
+    public func reset(){
         ConsentInformation.shared.reset()
     }
     
     /// Helper method to call the UMP SDK methods to request consent information and load/present a
     /// consent form if necessary.
-    func gatherConsent(
+    public func gatherConsent(
         testIdentifiers : [String],
         from viewController: UIViewController? = nil,
         consentGatheringComplete: @escaping @MainActor (Error?) -> Void

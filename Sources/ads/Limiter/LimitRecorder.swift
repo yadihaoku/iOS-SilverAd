@@ -91,57 +91,78 @@ final class LimitRecorder {
 
     @discardableResult
     func incrementSpecialAmount(key: String) -> Int {
-        lock.lock()
-        defer { lock.unlock() }
-        var record = loadRecordCached()
-        let current = record.counts[key] ?? 0
-        let newValue = current + 1
-        record.counts[key] = newValue
-        cachedRecord = record
-        saveRecord(record)
-        return newValue
+        lock.withLock {
+            var record = loadRecordCached()
+            let current = record.counts[key] ?? 0
+            let newValue = current + 1
+            record.counts[key] = newValue
+            cachedRecord = record
+            saveRecord(record)
+            return newValue
+        }
     }
 
     func setSpecialAmount(key: String, amount: Int) {
-        lock.lock()
-        defer { lock.unlock() }
-        var record = loadRecordCached()
-        record.counts[key] = amount
-        cachedRecord = record
-        saveRecord(record)
+        lock.withLock {
+            var record = loadRecordCached()
+            record.counts[key] = amount
+            cachedRecord = record
+            saveRecord(record)
+        }
+    }
+    
+    func updateAmountByMaxValue(key: String, amount: Int){
+        lock.withLock {
+            var record = loadRecordCached()
+            if (amount > record.counts[key] ?? 0){
+                
+                record.counts[key] = amount
+                cachedRecord = record
+                saveRecord(record)
+                
+            }
+        }
     }
 
     func updateLatestAdShowTime(key: String) {
-        lock.lock()
-        defer { lock.unlock() }
-        var record = loadRecordCached()
-        record.times[key] = Int64(Date().timeIntervalSince1970 * 1000) // ms
-        cachedRecord = record
-        saveRecord(record)
+        lock.withLock {
+            var record = loadRecordCached()
+            record.times[key] = Int64(Date().timeIntervalSince1970 * 1000) // ms
+            cachedRecord = record
+            saveRecord(record)
+        }
     }
 
     // MARK: - 读操作
 
     /// 读取某 key 的展示/点击计数（对应 Kotlin peekAmount）
     func peekAmount(key: String) -> Int {
-        lock.lock()
-        defer { lock.unlock() }
-        return loadRecordCached().counts[key] ?? 0
+        lock.withLock {
+            return loadRecordCached().counts[key] ?? 0
+        }
+    }
+    /// 一次读取多个 key 的计数，减少重复加锁开销
+    /// - Returns: [key: count]，不存在的 key 默认为 0
+    func peekAmounts(keys: [String]) -> [String: Int] {
+        lock.withLock {
+            let counts = loadRecordCached().counts
+            return Dictionary(uniqueKeysWithValues: keys.map { ($0, counts[$0] ?? 0) })
+        }
     }
 
     /// 读取某 key 的最后时间戳（ms，对应 Kotlin peekTime）
     func peekTime(key: String) -> Int64 {
-        lock.lock()
-        defer { lock.unlock() }
-        return loadRecordCached().times[key] ?? 0
+        lock.withLock {
+            return loadRecordCached().times[key] ?? 0
+        }
     }
 
     /// 清空所有数据（对应 Kotlin reset）
     func reset() {
-        lock.lock()
-        defer { lock.unlock() }
-        let fresh = AdLimitRecord()
-        cachedRecord = fresh
-        saveRecord(fresh)
+        lock.withLock {
+            let fresh = AdLimitRecord()
+            cachedRecord = fresh
+            saveRecord(fresh)
+        }
     }
 }

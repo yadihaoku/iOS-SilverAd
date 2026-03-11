@@ -113,12 +113,15 @@ public struct AdSceneGroup: Codable {
     }
 }
 
+
 // MARK: - AdConfig
 
 public struct AdConfig: Codable {
     public let version: Int
     public let clickLimit: Int
     public let showLimit: Int
+    
+    public let adLimits : AdLimitConfig
     public let adPools: [AdPool]
     public let adScenes: [AdSceneGroup]
 
@@ -127,12 +130,13 @@ public struct AdConfig: Codable {
     public let scenes: [String: AdScene]
     public let pools: [String: AdPool]
 
-    public init(version: Int, clickLimit: Int, showLimit: Int, adPools: [AdPool], adScenes: [AdSceneGroup]) {
+    public init(version: Int, clickLimit: Int, showLimit: Int,adLimits : AdLimitConfig, adPools: [AdPool], adScenes: [AdSceneGroup]) {
         self.version = version
         self.clickLimit = clickLimit
         self.showLimit = showLimit
         self.adPools = adPools
         self.adScenes = adScenes
+        self.adLimits = adLimits
 
         // 构建 scenes map
         var sceneMapping = [String: AdScene]()
@@ -153,13 +157,14 @@ public struct AdConfig: Codable {
         let version = try container.decode(Int.self, forKey: .version)
         let clickLimit = try container.decode(Int.self, forKey: .clickLimit)
         let showLimit = try container.decode(Int.self, forKey: .showLimit)
+        let adLimits = try container.decode(AdLimitConfig.self, forKey: .adLimits)
         let adPools = try container.decode([AdPool].self, forKey: .adPools)
         let adScenes = try container.decode([AdSceneGroup].self, forKey: .adScenes)
-        self.init(version: version, clickLimit: clickLimit, showLimit: showLimit, adPools: adPools, adScenes: adScenes)
+        self.init(version: version, clickLimit: clickLimit, showLimit: showLimit, adLimits: adLimits, adPools: adPools, adScenes: adScenes)
     }
 
     enum CodingKeys: String, CodingKey {
-        case version, clickLimit, showLimit, adPools, adScenes
+        case version, clickLimit, showLimit, adLimits, adPools, adScenes
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -167,6 +172,7 @@ public struct AdConfig: Codable {
         try container.encode(version, forKey: .version)
         try container.encode(clickLimit, forKey: .clickLimit)
         try container.encode(showLimit, forKey: .showLimit)
+        try container.encode(adLimits, forKey: .adLimits)
         try container.encode(adPools, forKey: .adPools)
         try container.encode(adScenes, forKey: .adScenes)
     }
@@ -176,6 +182,7 @@ public struct AdConfig: Codable {
         version: -1,
         clickLimit: 0,
         showLimit: 0,
+        adLimits: .default,
         adPools: [],
         adScenes: []
     )
@@ -236,4 +243,73 @@ extension AdUnit {
         
         return extras
     }
+}
+
+
+
+public struct AdFormatLimitConfig: Codable {
+
+    /// 24h 内最大展示次数（0 = 不限制）
+    public let daily24hShowLimit: Int
+
+    /// 24h 内最大点击次数（0 = 不限制）
+    public let daily24hClickLimit: Int
+
+    /// 单个广告最大点击次数（0 = 不限制）
+    public let singleAdClickLimit: Int
+
+    public init(
+        daily24hShowLimit:  Int = -1,
+        daily24hClickLimit: Int = -1,
+        singleAdClickLimit: Int = -1
+    ) {
+        self.daily24hShowLimit  = daily24hShowLimit
+        self.daily24hClickLimit = daily24hClickLimit
+        self.singleAdClickLimit = singleAdClickLimit
+    }
+
+    public var isUnlimited: Bool {
+        daily24hShowLimit == -1 && daily24hClickLimit == -1 && singleAdClickLimit == -1
+    }
+
+    /// 完全不限制
+    public static let unlimited = AdFormatLimitConfig()
+}
+
+public struct AdLimitConfig: Codable {
+
+    public let inter: AdFormatLimitConfig
+    public let native: AdFormatLimitConfig
+    public let reward: AdFormatLimitConfig
+    public let appopen: AdFormatLimitConfig
+
+    public init(
+        inter:   AdFormatLimitConfig = .unlimited,
+        native:         AdFormatLimitConfig = .unlimited,
+        reward:         AdFormatLimitConfig = .unlimited,
+        appopen:        AdFormatLimitConfig = .unlimited,
+    ) {
+        self.inter      = inter
+        self.native     = native
+        self.appopen    = appopen
+        self.reward     = reward
+    }
+
+    /// 根据广告格式取对应限制配置
+    public func config(for format: AdFormat) -> AdFormatLimitConfig {
+        switch format {
+        case .ad_interstitial, .ad_reward_interstitial:
+            return inter
+        case .ad_native:
+            return native
+        case .ad_reward:
+            return reward
+        case .ad_splash:
+            return appopen
+        default:
+            return .unlimited
+        }
+    }
+
+    public static let `default` = AdLimitConfig()
 }

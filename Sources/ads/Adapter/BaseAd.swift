@@ -254,7 +254,7 @@ open class BaseAd : NSObject, Ad {
                 guard let parent else { return }
                 // 对应 Kotlin currentAdScene?.let { limiter?.markAdShow(it) }
                 if let scene = parent.currentAdScene {
-                    parent.limiter?.markAdShow(scene: scene)
+                    parent.limiter?.markAdShow(ad: parent, scene: scene)
                 }
                 if parent.adUnit.autoRefill() {
                     SilverAd.shared.preloadAdWithAutoFill(adUnit: parent.adUnit)
