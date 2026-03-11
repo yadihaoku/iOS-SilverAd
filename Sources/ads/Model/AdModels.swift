@@ -130,7 +130,7 @@ public struct AdConfig: Codable {
     public let scenes: [String: AdScene]
     public let pools: [String: AdPool]
 
-    public init(version: Int, clickLimit: Int, showLimit: Int,adLimits : AdLimitConfig, adPools: [AdPool], adScenes: [AdSceneGroup]) {
+    public init(version: Int, clickLimit: Int, showLimit: Int,adLimits : AdLimitConfig = .default, adPools: [AdPool], adScenes: [AdSceneGroup]) {
         self.version = version
         self.clickLimit = clickLimit
         self.showLimit = showLimit
