@@ -69,7 +69,6 @@ extension UIView {
 
 public protocol FullScreenAd: Ad {
     /// 展示广告，返回是否成功
-    @discardableResult
     @MainActor
     func show(from viewController: UIViewController?) -> Bool
 }
