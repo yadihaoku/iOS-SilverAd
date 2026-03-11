@@ -107,23 +107,31 @@ final class CacheManager {
     // Swift 侧保持与 Kotlin 实现一致，按 eCPM 降序取第一个可成功移除的广告
 
     func pickAd(matching adUnits: [AdUnit]) -> Ad? {
-        lock.lock()
-        defer {lock.unlock()}
-        guard !cache.isEmpty else { return nil }
-        
-        clearExpiredAd()
-
-        let candidates = cache
-            .filter { adUnits.contains($0.ad.adUnit) }
-            .map { $0.ad }
-            .sorted { $0.adUnit.ecpm > $1.adUnit.ecpm }   // 对应 sortedBy { -it.adUnit.ecpm }
-
-        SilverAdLog.d("pickAd: sorted candidates = \(candidates)")
-
-        let ad = candidates.first { removeAdInternal($0) }   // 对应 firstOrNull { removeCachedAd(it) }
-        SilverAdLog.d("pickAd: ad Object candidates = \(String(describing: ad))")
-        
-        return ad
+        lock.withLock {
+            
+            guard !cache.isEmpty else { return nil }
+            
+            clearExpiredAd()
+            
+            let candidates = cache
+                .filter { adUnits.contains($0.ad.adUnit) }
+                .sorted {
+                   if $0.ad.adUnit.ecpm != $1.ad.adUnit.ecpm {
+                       $0.ad.adUnit.ecpm > $1.ad.adUnit.ecpm
+                   }else{
+                       // 2. ecpm 相同时，有效期较短（更快过期）的优先
+                       $0.ad.expireTimestamp() < $1.ad.expireTimestamp()
+                   }
+                }
+                .map { $0.ad }
+            // 对应 sortedBy { -it.adUnit.ecpm }
+            SilverAdLog.d("pickAd: adUnits = \(adUnits)")
+            SilverAdLog.d("pickAd: sorted candidates = \(candidates)")
+            let ad = candidates.first { removeAdInternal($0) }   // 对应 firstOrNull { removeCachedAd(it) }
+            SilverAdLog.d("pickAd: ad Object candidates = \(String(describing: ad))")
+            
+            return ad
+        }
     }
 
     func pickAd(for adUnit: AdUnit) -> Ad? {

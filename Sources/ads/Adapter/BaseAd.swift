@@ -178,7 +178,7 @@ open class BaseAd : NSObject, Ad {
     // MARK: - Description
 
     public override var description: String {
-        return "\(providerName)|\(adUnit.name)|expiredTime=\(expireTimestamp())|\(adUnit.adId)|ecpm: \(adUnit.ecpm)"
+        return "\(providerName)|\(adUnit.name)|\(uuid)|expiredTime=\(expireTimestamp())|\(adUnit.adId)|ecpm: \(adUnit.ecpm)"
     }
 
     // MARK: - Nested CallbackDelegate（对应 Kotlin inner class CallbackDelegate）
