@@ -49,6 +49,7 @@ open class BaseAd : NSObject, Ad {
                 extras["page_name"] = pool.name
             }
             extras["uuid"] = uuid
+            extras[SilverAdEvent.Param.configVersion] = SilverAd.shared.currentConfig.version
             extras.merge(adUnit.asDict()) { v1, v2 in
                 return v2
             }
@@ -125,13 +126,12 @@ open class BaseAd : NSObject, Ad {
         // 对应 Kotlin EventReporter.report(AD_LOAD_RESULT, buildEventData()) { ... }
         let loadResult: Bool
         if case .success(let val) = result { loadResult = val } else { loadResult = false }
+        
         EventReporter.report(
             event: SilverAdEvent.adLoadResult,
             eventData: buildEventData()
         ) { props in
             props[SilverAdEvent.Param.result]        = loadResult
-            props[SilverAdEvent.Param.consumeTime]   = loadDurationMs
-            props[SilverAdEvent.Param.configVersion] = SilverAd.shared.currentConfig.version
             if !loadResult {
                 if case .failure(let error) = result {
                     props[SilverAdEvent.Param.reason] = error.localizedDescription

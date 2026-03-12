@@ -310,6 +310,13 @@ public final class SilverAd {
     }
     
     private func canShowAdInternal(scene: String) -> (Bool, AdShowFailReason) {
+        
+        guard isInitialized else{
+            SilverAdLog.w("canShowAd: [\(scene)] -> false. sdk not init.")
+            return (false, .sdkNotInit)
+        }
+
+        
         let config = currentConfig
         guard let adScene = config.findAdScene(scene), adScene.isEnabled() else {
             SilverAdLog.w("canShowAd: [\(scene)] -> false. scene not found or disabled.")
@@ -428,7 +435,8 @@ public final class SilverAd {
             let autoRefillUnits = getEnabledAdUnits(scene: scene).filter { $0.autoRefill() }
             preloadAdByUnits(adUnits: autoRefillUnits)
             
-            EventReporter.report(event: SilverAdEvent.adFetchResult, extras : [
+            let eventData  = (cached as? BaseAd)?.buildEventData()
+            EventReporter.report(event: SilverAdEvent.adFetchResult,eventData: eventData, extras : [
                 SilverAdEvent.Param.scene : scene,
                 SilverAdEvent.Param.result : true,
                 SilverAdEvent.Param.from : "cache",
@@ -463,7 +471,8 @@ public final class SilverAd {
         }
         reportParams[SilverAdEvent.Param.result] = ad != nil
         
-        EventReporter.report(event: SilverAdEvent.adFetchResult, extras :reportParams)
+        let eventData  = (ad as? BaseAd)?.buildEventData()
+        EventReporter.report(event: SilverAdEvent.adFetchResult,eventData: eventData, extras :reportParams)
         
         return ad
     }

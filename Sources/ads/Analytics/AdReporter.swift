@@ -61,6 +61,7 @@ public enum AdShowFailReason: String {
     case blockByInterceptor = "block_by_interceptor"
     case networkError       = "network_error"
     case other              = "other"
+    case sdkNotInit         = "silver_ad_not_init"
     case none              = ""
 }
 

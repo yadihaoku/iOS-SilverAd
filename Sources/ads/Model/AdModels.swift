@@ -240,7 +240,7 @@ extension AdUnit {
         extras["unit_name"] = name
         extras["platform_ad_unit"] = adId
         extras["platform"] = platform
-        extras["autoFill"] = autoFill
+        extras["auto_fill"] = autoFill
         extras["ecpm"] = ecpm
         
         return extras
