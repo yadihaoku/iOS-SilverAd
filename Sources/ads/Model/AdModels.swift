@@ -120,7 +120,7 @@ public struct AdConfig: Codable {
     public let version: Int
     public let clickLimit: Int
     public let showLimit: Int
-    
+    public let state : Int
     public let adLimits : AdLimitConfig
     public let adPools: [AdPool]
     public let adScenes: [AdSceneGroup]
@@ -130,13 +130,14 @@ public struct AdConfig: Codable {
     public let scenes: [String: AdScene]
     public let pools: [String: AdPool]
 
-    public init(version: Int, clickLimit: Int, showLimit: Int,adLimits : AdLimitConfig = .default, adPools: [AdPool], adScenes: [AdSceneGroup]) {
+    public init(version: Int, clickLimit: Int, showLimit: Int, state : Int, adLimits : AdLimitConfig = .default, adPools: [AdPool], adScenes: [AdSceneGroup]) {
         self.version = version
         self.clickLimit = clickLimit
         self.showLimit = showLimit
         self.adPools = adPools
         self.adScenes = adScenes
         self.adLimits = adLimits
+        self.state = state
 
         // 构建 scenes map
         var sceneMapping = [String: AdScene]()
@@ -162,11 +163,13 @@ public struct AdConfig: Codable {
         
         let adLimits = try container.decodeIfPresent(AdLimitConfig.self, forKey: .adLimits) ?? .default
         
-        self.init(version: version, clickLimit: clickLimit, showLimit: showLimit, adLimits: adLimits, adPools: adPools, adScenes: adScenes)
+        let state = try container.decodeIfPresent(Int.self, forKey: .state) ?? 1
+        
+        self.init(version: version, clickLimit: clickLimit, showLimit: showLimit,state: state, adLimits: adLimits, adPools: adPools, adScenes: adScenes)
     }
 
     enum CodingKeys: String, CodingKey {
-        case version, clickLimit, showLimit, adLimits, adPools, adScenes
+        case version, clickLimit, showLimit, state, adLimits, adPools, adScenes
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -174,6 +177,7 @@ public struct AdConfig: Codable {
         try container.encode(version, forKey: .version)
         try container.encode(clickLimit, forKey: .clickLimit)
         try container.encode(showLimit, forKey: .showLimit)
+        try container.encode(state, forKey: .state)
         try container.encode(adLimits, forKey: .adLimits)
         try container.encode(adPools, forKey: .adPools)
         try container.encode(adScenes, forKey: .adScenes)
@@ -184,6 +188,7 @@ public struct AdConfig: Codable {
         version: -1,
         clickLimit: 0,
         showLimit: 0,
+        state: 0,
         adLimits: .default,
         adPools: [],
         adScenes: []
@@ -209,6 +214,10 @@ public extension AdConfig {
             .filter { $0.loadOnStart == 1 && $0.state == 1 }
             .flatMap { $0.adUnits }
             .filter { $0.state == 1 }
+    }
+    
+    public func isEnabled() -> Bool {
+        return state == 1
     }
 }
 

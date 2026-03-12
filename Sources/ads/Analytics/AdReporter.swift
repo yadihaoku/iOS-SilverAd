@@ -53,10 +53,11 @@ public enum AdShowFailReason: String {
     case clickLimit         = "click_limit"
     case showLimit          = "show_limit"
     case singleAdClickLimit = "single_ad_click_limit"
-    
     case intervalShowLimit  = "interval_show_limit"
     case intervalDuration   = "interval_duration"
     case sceneNotMatch      = "scene_not_match"
+    case adConfigDisabled   = "ad_config_disabled"
+    case sceneDisabled      = "scene_disabled"
     case adUnitNotFound     = "ad_unit_not_found"
     case blockByInterceptor = "block_by_interceptor"
     case networkError       = "network_error"

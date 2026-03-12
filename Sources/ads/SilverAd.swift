@@ -315,12 +315,22 @@ public final class SilverAd {
             SilverAdLog.w("canShowAd: [\(scene)] -> false. sdk not init.")
             return (false, .sdkNotInit)
         }
-
         
         let config = currentConfig
-        guard let adScene = config.findAdScene(scene), adScene.isEnabled() else {
-            SilverAdLog.w("canShowAd: [\(scene)] -> false. scene not found or disabled.")
+
+        guard config.isEnabled() else {
+            SilverAdLog.w("canShowAd: [\(scene)] -> false. ad config is disabled.")
+            return (false, .adConfigDisabled)
+        }
+        
+        guard let adScene = config.findAdScene(scene) else {
+            SilverAdLog.w("canShowAd: [\(scene)] -> false. scene not found.")
             return (false, .sceneNotMatch)
+        }
+        
+        guard adScene.isEnabled() else{
+            SilverAdLog.w("canShowAd: [\(scene)] -> false. scene disabled.")
+            return (false, .sceneDisabled)
         }
         
         let adUnits = getEnabledAdUnits(scene: scene)
