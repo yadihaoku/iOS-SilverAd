@@ -526,6 +526,7 @@ public final class SilverAd {
     }
     
     private func canPreloadAd(adUnit: AdUnit) -> Bool {
+        if !currentConfig.isEnabled(){ return false }
         if isOverTodayAdLimit() != .none  { return false }
         if isOverTodayAdTypeLimit(for: adUnit.type) != .none  { return false }
         
