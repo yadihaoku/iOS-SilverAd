@@ -34,12 +34,10 @@ public final class AdMobInterstitialAd: AdMobAds, FullScreenAd {
                     ))
                     return
                 }
-                Task{@MainActor in
-                    self.interstitial = ad
-                    self.updateEventData(with: ad?.responseInfo)
-                    self.markReady()
-                    cont.resume(returning: true)
-                }
+                self.interstitial = ad
+                self.updateEventData(with: ad?.responseInfo)
+                self.markReady()
+                cont.resume(returning: true)
             }
         }
     }

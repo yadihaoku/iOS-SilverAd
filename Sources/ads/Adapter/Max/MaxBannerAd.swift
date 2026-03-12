@@ -103,6 +103,7 @@ extension MaxBannerAd: MAAdViewAdDelegate {
     public func didLoad(_ ad: MAAd) {
         markReady()
         updateEventData(with: ad)
+        
         SilverAdLog.d("MaxBannerAd: didLoad (\(adUnit))")
         loadContinuation?.resume(returning: true)
         loadContinuation = nil

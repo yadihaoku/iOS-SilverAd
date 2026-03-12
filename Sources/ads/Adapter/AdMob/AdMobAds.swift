@@ -74,31 +74,31 @@ open class AdMobAds: BaseAd {
         switch true {
         case className == "com.google.ads.mediation.admob.AdMobAdapter",
              className.hasPrefix("GADMAdapterGoogleAdMobAds"):
-            return "Admob"
+            return "admob"
         case className.hasPrefix("com.google.ads.mediation.facebook"),
              className.hasPrefix("GADMAdapterFacebook"):
-            return "Facebook"
+            return "facebook"
         case className.hasPrefix("com.google.ads.mediation.applovin"),
              className.hasPrefix("GADMAdapterAppLovin"):
-            return "Applovin"
+            return "applovin"
         case className.hasPrefix("com.google.ads.mediation.ironsource"),
              className.hasPrefix("GADMAdapterIronSource"):
-            return "IronSource"
+            return "ironSource"
         case className.hasPrefix("com.google.ads.mediation.inmobi"),
              className.hasPrefix("GADMAdapterInMobi"):
-            return "Inmobi"
+            return "inmobi"
         case className.hasPrefix("com.google.ads.mediation.unity"),
              className.hasPrefix("GADMAdapterUnity"):
-            return "Unity"
+            return "unity"
         case className.hasPrefix("com.google.ads.mediation.vungle"),
              className.hasPrefix("GADMAdapterVungle"):
-            return "Vungle"
+            return "vungle"
         case className.hasPrefix("com.google.ads.mediation.pangle"),
              className.hasPrefix("GADMAdapterPangle"):
-            return "Pangle"
+            return "pangle"
         case className.hasPrefix("com.google.ads.mediation.mintegral"),
              className.hasPrefix("GADMAdapterMintegral"):
-            return "Mintegral"
+            return "mintegral"
         default:
             // 尝试从类名中提取网络名（对应 Kotlin 的 prefix 截取逻辑）
             let prefix = "com.google.ads.mediation."

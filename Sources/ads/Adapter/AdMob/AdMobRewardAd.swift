@@ -33,12 +33,10 @@ public final class AdMobRewardAd: AdMobAds, FullScreenAd {
                     ))
                     return
                 }
-                Task{@MainActor in
-                    self.rewardedAd = ad
-                    self.updateEventData(with: ad?.responseInfo)
-                    self.markReady()
-                    cont.resume(returning: true)
-                }
+                self.rewardedAd = ad
+                self.updateEventData(with: ad?.responseInfo)
+                self.markReady()
+                cont.resume(returning: true)
             }
         }
     }

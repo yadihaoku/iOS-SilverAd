@@ -60,7 +60,7 @@ extension MaxAds {
             data.currencyCode = "USD"
             data.revenuePrecision = convertRevenuePrecision(revenePrecesion: ad.revenuePrecision)
             data.micros       = Int64(ad.revenue * 1_000_000)
-            data.adSourceName = ad.networkName
+            data.adSourceName = ad.networkName.lowercased()
             data.thirdPartyAdPlacementId = ad.adUnitIdentifier
         }
     }

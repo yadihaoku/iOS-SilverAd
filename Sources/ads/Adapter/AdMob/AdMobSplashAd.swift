@@ -37,12 +37,10 @@ public final class AdMobSplashAd: AdMobAds, FullScreenAd {
                     ))
                     return
                 }
-                Task{@MainActor in
                     self.appOpenAd = ad
                     self.updateEventData(with: ad?.responseInfo)
                     self.markReady()
                     cont.resume(returning: true)
-                }
             }
         }
     }

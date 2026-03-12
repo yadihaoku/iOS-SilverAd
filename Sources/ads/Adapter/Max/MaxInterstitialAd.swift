@@ -74,6 +74,7 @@ extension MaxInterstitialAd: MAAdDelegate {
 
     public func didLoad(_ ad: MAAd) {
         markReady()
+        updateEventData(with: ad)
         SilverAdLog.d("MaxInterstitialAd: didLoad (\(adUnit))")
         loadContinuation?.resume(returning: true)
         loadContinuation = nil

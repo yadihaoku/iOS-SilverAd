@@ -9,8 +9,8 @@
 public enum AdFormat: String, Codable, CaseIterable {
     case ad_banner              = "banner"
     case ad_native              = "native"      // Swift 中 native 是保留关键字，用 native_ 代替
-    case ad_interstitial        = "inter"
+    case ad_interstitial        = "interstitial"
     case ad_reward              = "reward"
-    case ad_reward_interstitial = "reward_inter"
+    case ad_reward_interstitial = "reward_interstitial"
     case ad_splash              = "appopen"
 }

@@ -71,6 +71,7 @@ extension MaxRewardAd: MARewardedAdDelegate {
 
     public func didLoad(_ ad: MAAd) {
         markReady()
+        updateEventData(with: ad)
         SilverAdLog.d("MaxRewardAd: didLoad (\(adUnit))")
         loadContinuation?.resume(returning: true)
         loadContinuation = nil
