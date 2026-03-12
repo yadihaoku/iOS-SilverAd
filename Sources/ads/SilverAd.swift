@@ -303,7 +303,7 @@ public final class SilverAd {
                 extras[SilverAdEvent.Param.result] = false
                 extras[SilverAdEvent.Param.scene] = scene
                 extras[SilverAdEvent.Param.reason] = checkResult.1.rawValue
-                extras[SilverAdEvent.Param.newVersion] = currentConfig.version
+                extras[SilverAdEvent.Param.configVersion] = currentConfig.version
             }
         }
         return checkResult
@@ -421,7 +421,7 @@ public final class SilverAd {
                 SilverAdEvent.Param.scene : scene,
                 SilverAdEvent.Param.result : false,
                 SilverAdEvent.Param.reason : check.1.rawValue,
-                SilverAdEvent.Param.newVersion : currentConfig.version
+                SilverAdEvent.Param.configVersion : currentConfig.version
             ])
             
             return nil
@@ -437,10 +437,8 @@ public final class SilverAd {
             
             let eventData  = (cached as? BaseAd)?.buildEventData()
             EventReporter.report(event: SilverAdEvent.adFetchResult,eventData: eventData, extras : [
-                SilverAdEvent.Param.scene : scene,
                 SilverAdEvent.Param.result : true,
                 SilverAdEvent.Param.from : "cache",
-                SilverAdEvent.Param.newVersion : currentConfig.version
             ])
             
             return cached
@@ -455,7 +453,6 @@ public final class SilverAd {
         var reportParams : [String : Any] = [
             SilverAdEvent.Param.scene : scene,
             SilverAdEvent.Param.from : "load",
-            SilverAdEvent.Param.newVersion : currentConfig.version
         ]
         do{
             ad = try result.get()
