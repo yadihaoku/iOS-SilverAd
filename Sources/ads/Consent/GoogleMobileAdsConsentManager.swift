@@ -60,6 +60,9 @@ public class GoogleMobileAdsConsentManager: NSObject {
             parameters.debugSettings = debugSettings
         }
         
+        // Indicate the user is under age of consent.
+        parameters.isTaggedForUnderAgeOfConsent = false
+        
         // Requesting an update to consent information should be called on every app launch.
         ConsentInformation.shared.requestConsentInfoUpdate(with: parameters) {
             requestConsentError in

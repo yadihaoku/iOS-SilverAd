@@ -38,8 +38,9 @@ public class SilverAdParams {
     public var loadInterceptor: AdLoadInterceptor?
     public var maxSdkKey: String?
     public var testIdentifiers: [String]?
-    
+    // Applovin Max sdk 需要 设置之后 会有一个 弹窗
     public var privacyPolicyURL: String?
+    // Applovin Max sdk 需要 设置之后 会有一个 弹窗
     public var termsOfServiceURL: String?
     public var shouldShowTermsAndPrivacyPolicyAlertInGDPR = true
     
