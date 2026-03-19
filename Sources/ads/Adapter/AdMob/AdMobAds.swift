@@ -42,11 +42,11 @@ open class AdMobAds: BaseAd {
         updateEvent {
             $0.currencyCode = p1.currencyCode
             $0.revenuePrecision = p1.precision.rawValue
-            $0.micros = Int64(truncating: p1.value)
+            $0.micros = Int64(p1.value.doubleValue * 1_000_000)
         }
         // 此处可将 paid.value / paid.currencyCode 上报到 EventReporter
         // 保持与 Kotlin 一致的结构，留给上层集成
-        SilverAdLog.w("AdMobAds: paidEvent value=\(p1.value) currency=\(p1.currencyCode) precision=\(p1.precision.rawValue)")
+        SilverAdLog.w("AdMobAds: paidEvent   value=\(p1.value.doubleValue)  value=\(p1.value) currency=\(p1.currencyCode) precision=\(p1.precision.rawValue)")
     }
 
     // MARK: - 更新响应信息（对应 updateEventDataWith(ResponseInfo)）
