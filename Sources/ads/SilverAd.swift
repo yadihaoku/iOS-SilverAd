@@ -59,20 +59,37 @@ public final class SilverAd {
     private static let FETCH_AD_MAX_ATTEMPTS = 1
     private static let MAX_RETRY_COUNT = 3
     
-    // MARK: - Config
-    private var configInstance: AdConfig?
+    // MARK: - Config (protected by configLock for thread safety)
+    private let configLock = NSLock()
+    private var _configInstance: AdConfig?
     public var currentConfig: AdConfig {
-        return configInstance ?? .emptyConfig
+        configLock.lock()
+        defer { configLock.unlock() }
+        return _configInstance ?? .emptyConfig
+    }
+    private var configInstance: AdConfig? {
+        get { configLock.lock(); defer { configLock.unlock() }; return _configInstance }
+        set { configLock.lock(); defer { configLock.unlock() }; _configInstance = newValue }
     }
     
     // MARK: - Dependencies（可外部注入）
     private var limitManager = AdLimitManager.shared
     private var requestInterceptor: AdLoadInterceptor = DefaultRequestInterceptor()
     
-    // MARK: - State
-    private var isInitialized = false
-    private var appInForeground = false
+    // MARK: - State (accessed from multiple threads, protected by stateLock)
+    private var _isInitialized = false
+    private var _appInForeground = false
     public var manualAllowAutoFill = true
+
+    private var isInitialized: Bool {
+        get { stateLock.lock(); defer { stateLock.unlock() }; return _isInitialized }
+        set { stateLock.lock(); defer { stateLock.unlock() }; _isInitialized = newValue }
+    }
+
+    private var appInForeground: Bool {
+        get { stateLock.lock(); defer { stateLock.unlock() }; return _appInForeground }
+        set { stateLock.lock(); defer { stateLock.unlock() }; _appInForeground = newValue }
+    }
     
     // MARK: - Cache
     private let cacheManager = CacheManager()
@@ -497,11 +514,10 @@ public final class SilverAd {
 
                     case .failure(let err):
                         SilverAdLog.d("fastestAdByScene: failed \(unit.adId)")
+                        self?.scheduleRetry(adUnit: unit)
                         // 全部失败时通知调用方
                         if receivedCount == totalCount && !hasFirstSuccess {
                             await racer.failIfNeeded(err)
-                        } else {
-                            self?.scheduleRetry(adUnit: unit)
                         }
                     }
 
@@ -542,34 +558,36 @@ public final class SilverAd {
     
     private func scheduleRetry(adUnit: AdUnit) {
         stateLock.lock()
+        defer { stateLock.unlock() }
+
         let count = (retryTimes[adUnit] ?? 0) + 1
         retryTimes[adUnit] = count
-        
-        defer{
-            stateLock.unlock()
-        }
-        
+
         guard count <= SilverAd.MAX_RETRY_COUNT else {
             SilverAdLog.w("scheduleRetry: over max retry count!! \(adUnit)")
             retryTasks.removeValue(forKey: adUnit)?.cancel()
             return
         }
-        
+
         guard retryTasks[adUnit] == nil else {
             return
         }
-        let task = Task {
+        let task = Task { [weak self] in
             try? await Task.sleep(nanoseconds: UInt64(SilverAd.RETRY_LOAD_DELAY * 1_000_000_000))
+            guard let self else { return }
             self.preloadAd(adUnit: adUnit)
+            self.stateLock.lock()
             self.retryTasks.removeValue(forKey: adUnit)
+            self.stateLock.unlock()
         }
         retryTasks[adUnit] = task
     }
     
     public func cancelRetry(adUnit: AdUnit) {
         stateLock.lock()
+        defer { stateLock.unlock() }
         retryTasks.removeValue(forKey: adUnit)?.cancel()
-        stateLock.unlock()
+        retryTimes.removeValue(forKey: adUnit)
     }
     
     // MARK: - Startup Load
@@ -646,16 +664,17 @@ private actor FirstResultRacer {
 
     private var continuation: CheckedContinuation<Result<any Ad, Error>, Never>?
     private var resolved = false
+    private var storedResult: Result<any Ad, Error>?
 
     /// 等待第一个结果（调用方 await 此方法）
     func wait() async -> Result<any Ad, Error> {
-        await withCheckedContinuation { cont in
-            if resolved {
-                // 已经有结果了（极罕见的时序：wait 比 trySetFirst 晚调用）
-                // 此分支理论上不会发生，因为 wait 在 Task 启动之前就 await 了
-                cont.resume(returning: .failure(
-                    AdLoadException(code: "-1", msg: "racer already resolved")
-                ))
+        // 如果已经有结果，直接返回（处理 wait 晚于 resolve 的时序）
+        if resolved, let result = storedResult {
+            return result
+        }
+        return await withCheckedContinuation { cont in
+            if resolved, let result = storedResult {
+                cont.resume(returning: result)
             } else {
                 continuation = cont
             }
@@ -667,7 +686,9 @@ private actor FirstResultRacer {
     func trySetFirst(_ ad: any Ad) -> Bool {
         guard !resolved else { return false }
         resolved = true
-        continuation?.resume(returning: .success(ad))
+        let result: Result<any Ad, Error> = .success(ad)
+        storedResult = result
+        continuation?.resume(returning: result)
         continuation = nil
         return true
     }
@@ -676,7 +697,9 @@ private actor FirstResultRacer {
     func failIfNeeded(_ error: Error) {
         guard !resolved else { return }
         resolved = true
-        continuation?.resume(returning: .failure(error))
+        let result: Result<any Ad, Error> = .failure(error)
+        storedResult = result
+        continuation?.resume(returning: result)
         continuation = nil
     }
 
@@ -684,7 +707,9 @@ private actor FirstResultRacer {
     func timeoutIfNeeded(_ error: Error) {
         guard !resolved else { return }
         resolved = true
-        continuation?.resume(returning: .failure(error))
+        let result: Result<any Ad, Error> = .failure(error)
+        storedResult = result
+        continuation?.resume(returning: result)
         continuation = nil
     }
 }
