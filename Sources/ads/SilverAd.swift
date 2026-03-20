@@ -549,19 +549,24 @@ public final class SilverAd {
             return
         }
 
+        var shouldLoad = false
         preloadLock.withLock {
-            guard preloadRequestList[adUnit] == nil else {
-                return
+            guard preloadRequestList[adUnit] == nil else { return }
+            preloadRequestList[adUnit] = Task {}  // 占位
+            shouldLoad = true
+        }
+
+        guard shouldLoad else { return }
+
+        let task = Task {
+            await loadAndCacheAdByUnit(adUnit: adUnit)
+            preloadLock.withLock {
+                preloadRequestList.removeValue(forKey: adUnit)
             }
-            
-            // 用 placeholder 占位，防止竞态窗口
-            let task = Task {
-                await loadAndCacheAdByUnit(adUnit: adUnit)
-                preloadLock.withLock {
-                    preloadRequestList.removeValue(forKey: adUnit)
-                }
-            }
-            preloadRequestList[adUnit] = task
+        }
+        
+        preloadLock.withLock {
+            preloadRequestList[adUnit] = task  // 替换占位
         }
     }
     
