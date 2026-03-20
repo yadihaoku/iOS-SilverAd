@@ -153,6 +153,7 @@ open class BaseAd : NSObject, Ad {
     // MARK: - Ad Protocol
     @MainActor
     public func isReady() -> Bool {
+        SilverAdLog.d("isReady: \(uuid) \(adUnit.adId)")
         return mIsReady && originAd != nil
     }
 

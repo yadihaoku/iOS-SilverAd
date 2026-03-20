@@ -91,7 +91,8 @@ public final class SilverAd {
     private var retryTimes: [AdUnit: Int] = [:]
     
     // MARK: - In-flight preload requests
-    private var preloadRequestList: [AdUnit: Task<Result<any Ad, Error>, Never>] = [:]
+//    private var preloadRequestList: [AdUnit: Task<Result<any Ad, Error>, Never>] = [:]
+    private var preloadRequestList: [AdUnit: Task<Void, Never>] = [:]
     private let preloadLock = NSLock()
     
     private lazy var fetcher: AdFetcherOptimized = {
@@ -108,6 +109,7 @@ public final class SilverAd {
         Task{@MainActor in
             let state = UIApplication.shared.applicationState
             appIsInForeground = (state == .active || state == .inactive)
+            SilverAdLog.d("updateAppState appIsInForeground=\(appIsInForeground)")
         }
     }
     // MARK: - Lifecycle（替代 ProcessLifecycleOwner）
@@ -130,12 +132,12 @@ public final class SilverAd {
     }
     
     @objc private func handleForeground() {
-        debugPrint("handleForeground")
+        SilverAdLog.d("handleForeground")
         appIsInForeground = true
     }
     
     @objc private func handleBackground() {
-        debugPrint("handleBackground")
+        SilverAdLog.d("handleBackground")
         appIsInForeground = false
     }
     
@@ -268,10 +270,11 @@ public final class SilverAd {
     
     public func updateConfig(_ adConfig: AdConfig) {
         let curVersion = currentConfig.version
-        guard adConfig.version > curVersion else {
-            SilverAdLog.d("updateConfig ignored: new=\(adConfig.version) cur=\(curVersion)")
-            return
-        }
+//        guard adConfig.version > curVersion else {
+//            SilverAdLog.d("updateConfig ignored: new=\(adConfig.version) cur=\(curVersion)")
+//            return
+//        }
+        SilverAdLog.d("updateConfig ignored: new=\(adConfig.version) cur=\(curVersion)")
         configInstance = adConfig
         
         EventReporter.report(event: SilverAdEvent.adConfigUpdate){extras in
@@ -281,11 +284,11 @@ public final class SilverAd {
         }
         
         // 取消所有 retry 任务
-        stateLock.lock()
-        retryTasks.values.forEach { $0.cancel() }
-        retryTasks.removeAll()
-        retryTimes.removeAll()
-        stateLock.unlock()
+        stateLock.withLock {
+            retryTasks.values.forEach { $0.cancel() }
+            retryTasks.removeAll()
+            retryTimes.removeAll()
+        }
         
         Task { await MainActor.run { scheduleStartupLoad() } }
     }
@@ -504,11 +507,23 @@ public final class SilverAd {
     
     private func preloadAd(adUnit: AdUnit) {
         guard canPreloadAd(adUnit: adUnit) else {
-            debugPrint("canPreloadAd: false ->\(adUnit.desc())")
+            SilverAdLog.d("canPreloadAd: false ->\(adUnit.desc())")
             return
         }
-        Task {
-            await loadAndCacheAdByUnit(adUnit: adUnit)
+
+        preloadLock.withLock {
+            guard preloadRequestList[adUnit] == nil else {
+                return
+            }
+            
+            // 用 placeholder 占位，防止竞态窗口
+            let task = Task {
+                await loadAndCacheAdByUnit(adUnit: adUnit)
+                preloadLock.withLock {
+                    preloadRequestList.removeValue(forKey: adUnit)
+                }
+            }
+            preloadRequestList[adUnit] = task
         }
     }
     
@@ -531,10 +546,19 @@ public final class SilverAd {
         if isOverTodayAdLimit() != .none  { return false }
         if isOverTodayAdTypeLimit(for: adUnit.type) != .none  { return false }
         
+        // 这行代码有异常 Task 6: EXC_BAD_ACCESS (code=1, address=0x10)
+        let isPreloading = preloadLock.withLock {
+            preloadRequestList[adUnit] != nil
+        }
+        if isPreloading {
+            SilverAdLog.d("\(adUnit) in preload preloadRequestList")
+            return false
+        }
+        
         if cacheManager.isCachedByAdUnit(adUnit) { return false }
         if requestInterceptor.onIntercept(adUnit: adUnit) { return false }
         if !appIsInForeground {
-            debugPrint("appIsInForeground  false")
+            SilverAdLog.d("appIsInForeground  false")
             return false
         }
         return true
@@ -705,36 +729,52 @@ public final class SilverAd {
     
     // MARK: - Retry
     
+    
     private func scheduleRetry(adUnit: AdUnit) {
-        stateLock.lock()
-        let count = (retryTimes[adUnit] ?? 0) + 1
-        retryTimes[adUnit] = count
-        
-        defer{
-            stateLock.unlock()
+        var shouldSchedule = false
+
+        stateLock.withLock {
+            let count = (retryTimes[adUnit] ?? 0) + 1
+            retryTimes[adUnit] = count
+
+            guard count <= SilverAd.MAX_RETRY_COUNT else {
+                SilverAdLog.w("scheduleRetry: over max retry count!! \(adUnit)")
+                retryTasks.removeValue(forKey: adUnit)?.cancel()
+                retryTimes.removeValue(forKey: adUnit)
+                return
+            }
+
+            guard retryTasks[adUnit] == nil else {
+                return
+            }
+
+            shouldSchedule = true
         }
-        
-        guard count <= SilverAd.MAX_RETRY_COUNT else {
-            SilverAdLog.w("scheduleRetry: over max retry count!! \(adUnit)")
-            retryTasks.removeValue(forKey: adUnit)?.cancel()
-            return
-        }
-        
-        guard retryTasks[adUnit] == nil else {
-            return
-        }
+
+        guard shouldSchedule else { return }
+
+        // Task 创建放在锁外
         let task = Task {
+            defer{
+                self.stateLock.withLock {
+                    self.retryTasks.removeValue(forKey: adUnit)
+                }
+            }
+            
             try? await Task.sleep(nanoseconds: UInt64(SilverAd.RETRY_LOAD_DELAY * 1_000_000_000))
             self.preloadAd(adUnit: adUnit)
-            self.retryTasks.removeValue(forKey: adUnit)
         }
-        retryTasks[adUnit] = task
+
+        stateLock.withLock {
+            retryTasks[adUnit] = task
+        }
     }
     
     public func cancelRetry(adUnit: AdUnit) {
-        stateLock.lock()
-        retryTasks.removeValue(forKey: adUnit)?.cancel()
-        stateLock.unlock()
+        stateLock.withLock {
+            retryTasks.removeValue(forKey: adUnit)?.cancel()
+            retryTimes.removeValue(forKey: adUnit)
+        }
     }
     
     // MARK: - Startup Load

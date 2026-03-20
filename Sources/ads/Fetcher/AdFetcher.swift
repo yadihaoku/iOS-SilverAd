@@ -80,7 +80,7 @@ final class AdFetcherOptimized: AdFetcher {
     override func doFetch(provider: AdProvider, adUnit: AdUnit) async -> Result<Ad, Error> {
         // 先尝试从缓存取（对应 Kotlin SilverAd.retrieveCachedAd(adUnit)）
         if let cachedAd = SilverAd.shared.retrieveCachedAd(adUnit: adUnit) {
-            SilverAdLog.w("AdFetcherOptimized: fetch ad from cache! \(cachedAd)")
+            SilverAdLog.d("AdFetcherOptimized: fetch ad from cache! \(cachedAd)")
             return .success(cachedAd)
         }
         // 缓存未命中，走正常加载流程
