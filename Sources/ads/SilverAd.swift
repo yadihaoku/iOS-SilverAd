@@ -36,13 +36,14 @@ public class SilverAdParams {
     public var debug: Bool = false
     public var reporter: AdReporter?
     public var loadInterceptor: AdLoadInterceptor?
-    public var maxSdkKey: String?
+    // 只有内部可以设置
+    var maxSdkKey: String?
     public var testIdentifiers: [String]?
     // Applovin Max sdk 需要 设置之后 会有一个 弹窗
     public var privacyPolicyURL: String?
     // Applovin Max sdk 需要 设置之后 会有一个 弹窗
     public var termsOfServiceURL: String?
-    public var shouldShowTermsAndPrivacyPolicyAlertInGDPR = true
+    public var shouldShowTermsAndPrivacyPolicyAlertInGDPR = false
     
     public init(){}
 }
@@ -67,6 +68,8 @@ public final class SilverAd {
     public var currentConfig: AdConfig {
         return configInstance ?? .emptyConfig
     }
+    
+    private var initParams : SilverAdParams? = nil
     
     // MARK: - Dependencies（可外部注入）
     private var limitManager = AdLimitManager.shared
@@ -94,6 +97,9 @@ public final class SilverAd {
 //    private var preloadRequestList: [AdUnit: Task<Result<any Ad, Error>, Never>] = [:]
     private var preloadRequestList: [AdUnit: Task<Void, Never>] = [:]
     private let preloadLock = NSLock()
+    
+    // 广告平台 初始化标记
+    private var platformInitState: [String : Bool] = [:]
     
     private lazy var fetcher: AdFetcherOptimized = {
         AdFetcherOptimized(providers: [AdMobProvider(), MaxProvider()])
@@ -141,12 +147,25 @@ public final class SilverAd {
         appIsInForeground = false
     }
     
+    private func checkSdkState() {
+        guard let params = initParams else { return }
+        guard let platformConfig = currentConfig.platformConfig else { return }
+        guard let maxKey = platformConfig.maxSdkKey else { return }
+        
+        // 不需要在这里判断，initMax 内部会原子检查
+        var p = params
+        p.maxSdkKey = maxKey
+        initMax(p)
+    }
+    
     // MARK: - Init
     public func initialize(params: SilverAdParams) {
         guard !isInitialized else {
             SilverAdLog.d("SilverAd: already initialized!")
             return
         }
+        self.initParams = params
+        
         isInitialized = true
         SilverAdLog.isDebug = params.debug
         
@@ -192,19 +211,33 @@ public final class SilverAd {
     }
     
     private func initAdSdk(_ params : SilverAdParams){
-        
         debugPrint("initAdSdk ->\(params)")
-        
         initMobileAds()
-        initMax(params)
+        
+        checkSdkState()
     }
     
     private func initMax(_ params : SilverAdParams){
         
-        guard let key = params.maxSdkKey else{
-            debugPrint("ignore init applovin max sdk")
+        guard let key = params.maxSdkKey else {
+            debugPrint("ignore init applovin max sdk: no key")
             return
         }
+
+        var shouldInit = false
+        stateLock.withLock {
+            if platformInitState[SilverAd.PLATFORM_MAX] != true {
+                platformInitState[SilverAd.PLATFORM_MAX] = true
+                shouldInit = true
+            }
+        }
+
+        guard shouldInit else {
+            debugPrint("ignore init applovin max sdk: already inited")
+            return
+        }
+        
+        SilverAdLog.d("initMax")
         
         // Create the initialization configuration
         let initConfig = ALSdkInitializationConfiguration(sdkKey: key) { builder in
@@ -243,12 +276,15 @@ public final class SilverAd {
             // Initialize Adjust SDK
             debugPrint("ALSdk inited!")
         }
-        
     }
     
     private func initMobileAds(){
         MobileAds.shared.start(){a in
             debugPrint("MobileAds inited!")
+        }
+        // 标记 admob 初始化
+        stateLock.withLock{
+            platformInitState[SilverAd.PLATFORM_ADMOB] = true
         }
     }
     
@@ -276,6 +312,8 @@ public final class SilverAd {
 //        }
         SilverAdLog.d("updateConfig ignored: new=\(adConfig.version) cur=\(curVersion)")
         configInstance = adConfig
+        
+        checkSdkState()
         
         EventReporter.report(event: SilverAdEvent.adConfigUpdate){extras in
             extras[SilverAdEvent.Param.result] = true

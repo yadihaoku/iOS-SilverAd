@@ -114,6 +114,19 @@ public struct AdSceneGroup: Codable {
 }
 
 
+// MARK: - AdPlatformConfig
+
+/// 各广告平台的 SDK Key / App ID 配置
+/// 目前包含 AppLovin MAX SDK Key，后续可按需扩展其它平台（如 AdMob App ID、Pangle App ID 等）
+public struct AdPlatformConfig: Codable {
+    /// AppLovin MAX SDK Key
+    public let maxSdkKey: String?
+
+    public init(maxSdkKey: String? = nil) {
+        self.maxSdkKey = maxSdkKey
+    }
+}
+
 // MARK: - AdConfig
 
 public struct AdConfig: Codable {
@@ -124,13 +137,15 @@ public struct AdConfig: Codable {
     public let adLimits : AdLimitConfig
     public let adPools: [AdPool]
     public let adScenes: [AdSceneGroup]
+    /// 各广告平台的 Key / App ID 配置（可选，不存在时为 nil）
+    public let platformConfig: AdPlatformConfig?
 
     // 懒加载 scenes Map（Swift 用 lazy var，但 struct 不支持 lazy；改为 computed + 内部缓存）
     // 用 class 包装或直接在 init 时构建
     public let scenes: [String: AdScene]
     public let pools: [String: AdPool]
 
-    public init(version: Int, clickLimit: Int, showLimit: Int, state : Int = 1, adLimits : AdLimitConfig = .default, adPools: [AdPool], adScenes: [AdSceneGroup]) {
+    public init(version: Int, clickLimit: Int, showLimit: Int, state : Int = 1, adLimits : AdLimitConfig = .default, adPools: [AdPool], adScenes: [AdSceneGroup], platformConfig: AdPlatformConfig? = nil) {
         self.version = version
         self.clickLimit = clickLimit
         self.showLimit = showLimit
@@ -138,6 +153,7 @@ public struct AdConfig: Codable {
         self.adScenes = adScenes
         self.adLimits = adLimits
         self.state = state
+        self.platformConfig = platformConfig
 
         // 构建 scenes map
         var sceneMapping = [String: AdScene]()
@@ -160,16 +176,18 @@ public struct AdConfig: Codable {
         let showLimit = try container.decode(Int.self, forKey: .showLimit)
         let adPools = try container.decode([AdPool].self, forKey: .adPools)
         let adScenes = try container.decode([AdSceneGroup].self, forKey: .adScenes)
-        
+
         let adLimits = try container.decodeIfPresent(AdLimitConfig.self, forKey: .adLimits) ?? .default
-        
+
         let state = try container.decodeIfPresent(Int.self, forKey: .state) ?? 1
-        
-        self.init(version: version, clickLimit: clickLimit, showLimit: showLimit,state: state, adLimits: adLimits, adPools: adPools, adScenes: adScenes)
+
+        let platformConfig = try container.decodeIfPresent(AdPlatformConfig.self, forKey: .platformConfig)
+
+        self.init(version: version, clickLimit: clickLimit, showLimit: showLimit, state: state, adLimits: adLimits, adPools: adPools, adScenes: adScenes, platformConfig: platformConfig)
     }
 
     enum CodingKeys: String, CodingKey {
-        case version, clickLimit, showLimit, state, adLimits, adPools, adScenes
+        case version, clickLimit, showLimit, state, adLimits, adPools, adScenes, platformConfig
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -181,6 +199,7 @@ public struct AdConfig: Codable {
         try container.encode(adLimits, forKey: .adLimits)
         try container.encode(adPools, forKey: .adPools)
         try container.encode(adScenes, forKey: .adScenes)
+        try container.encodeIfPresent(platformConfig, forKey: .platformConfig)
     }
 
     // MARK: - Empty Config
