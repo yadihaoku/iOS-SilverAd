@@ -23,6 +23,56 @@ public protocol AdLoadInterceptor {
     func onIntercept(scene: String) -> Bool
 }
 
+// MARK: - Block-based Implementation
+
+public final class BlockAdLoadInterceptor: AdLoadInterceptor {
+
+    public typealias AdUnitInterceptBlock = (AdUnit) -> Bool
+    public typealias SceneInterceptBlock  = (String) -> Bool
+
+    private let adUnitBlock: AdUnitInterceptBlock
+    private let sceneBlock:  SceneInterceptBlock
+
+    public init(
+        adUnit: @escaping AdUnitInterceptBlock,
+        scene:  @escaping SceneInterceptBlock
+    ) {
+        self.adUnitBlock = adUnit
+        self.sceneBlock  = scene
+    }
+
+    public func onIntercept(adUnit: AdUnit) -> Bool {
+        adUnitBlock(adUnit)
+    }
+
+    public func onIntercept(scene: String) -> Bool {
+        sceneBlock(scene)
+    }
+}
+
+// MARK: - Convenience Factory
+
+public extension BlockAdLoadInterceptor {
+
+    /// 两个维度都用同一套逻辑判断（比如全局开关）
+    static func unified(
+        adUnit adUnitBlock: @escaping AdUnitInterceptBlock,
+        scene  sceneBlock:  @escaping SceneInterceptBlock
+    ) -> BlockAdLoadInterceptor {
+        BlockAdLoadInterceptor(adUnit: adUnitBlock, scene: sceneBlock)
+    }
+
+    /// 始终不拦截（透传）
+    static var passthrough: BlockAdLoadInterceptor {
+        BlockAdLoadInterceptor(adUnit: { _ in false }, scene: { _ in false })
+    }
+
+    /// 始终拦截（屏蔽所有广告）
+    static var blockAll: BlockAdLoadInterceptor {
+        BlockAdLoadInterceptor(adUnit: { _ in true }, scene: { _ in true })
+    }
+}
+
 public struct DefaultRequestInterceptor: AdLoadInterceptor {
     public func onIntercept(adUnit: AdUnit) -> Bool { return false }
     public func onIntercept(scene: String) -> Bool { return false }
@@ -677,7 +727,9 @@ public final class SilverAd {
         //   - stream 消费 Task 独立运行到所有结果收齐为止
 
         private func fastestAdByScene(adScene: AdScene) async -> Result<any Ad, Error> {
-            let adUnits = getEnabledAdUnits(scene: adScene.sceneName)
+            let adUnits = getEnabledAdUnits(scene: adScene.sceneName).filter { unit in
+                !requestInterceptor.onIntercept(adUnit: unit)
+            }
             guard !adUnits.isEmpty else {
                 return .failure(AdLoadException(code: "-1", msg: "no ad units for scene \(adScene.sceneName)"))
             }
