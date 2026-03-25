@@ -452,7 +452,7 @@ public final class SilverAd {
     public func isOverTodayAdLimit() -> AdShowFailReason {
         let count = limitManager.getAdClickCount()
         let limit = currentConfig.clickLimit
-        if count >= limit && limit > 0 {
+        if limit > 0 && count >= limit  {
             SilverAdLog.d("canShowAd-> false. over click limit. (\(count) >= \(limit))")
             return .clickLimit
         }
@@ -599,24 +599,15 @@ public final class SilverAd {
             return
         }
 
-        var shouldLoad = false
         preloadLock.withLock {
             guard preloadRequestList[adUnit] == nil else { return }
-            preloadRequestList[adUnit] = Task {}  // 占位
-            shouldLoad = true
-        }
 
-        guard shouldLoad else { return }
-
-        let task = Task {
-            await loadAndCacheAdByUnit(adUnit: adUnit)
-            preloadLock.withLock {
-                preloadRequestList.removeValue(forKey: adUnit)
+            preloadRequestList[adUnit] = Task {
+                await loadAndCacheAdByUnit(adUnit: adUnit)
+                preloadLock.withLock {
+                    preloadRequestList.removeValue(forKey: adUnit)
+                }
             }
-        }
-        
-        preloadLock.withLock {
-            preloadRequestList[adUnit] = task  // 替换占位
         }
     }
     
@@ -639,19 +630,20 @@ public final class SilverAd {
         if isOverTodayAdLimit() != .none  { return false }
         if isOverTodayAdTypeLimit(for: adUnit.type) != .none  { return false }
         
+        
+        if cacheManager.isCachedByAdUnit(adUnit) { return false }
+        if requestInterceptor.onIntercept(adUnit: adUnit) { return false }
+        if !appIsInForeground {
+            SilverAdLog.d("appIsInForeground  false")
+            return false
+        }
+        
         // 这行代码有异常 Task 6: EXC_BAD_ACCESS (code=1, address=0x10)
         let isPreloading = preloadLock.withLock {
             preloadRequestList[adUnit] != nil
         }
         if isPreloading {
             SilverAdLog.d("\(adUnit) in preload preloadRequestList")
-            return false
-        }
-        
-        if cacheManager.isCachedByAdUnit(adUnit) { return false }
-        if requestInterceptor.onIntercept(adUnit: adUnit) { return false }
-        if !appIsInForeground {
-            SilverAdLog.d("appIsInForeground  false")
             return false
         }
         return true
